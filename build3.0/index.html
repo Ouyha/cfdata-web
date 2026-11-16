@@ -1,0 +1,4672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare IP Scan</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --shadow-color-soft: rgba(0, 0, 0, 0.06);
+            --surface-muted: #f8fafc;
+            --surface-strong: #f9fafb;
+            --input-bg: #ffffff;
+            --status-bg: #ecfdf5;
+            --status-text: #065f46;
+            --log-bg: #1e293b;
+            --log-text: #10b981;
+            --modal-overlay-bg: rgba(15, 23, 42, 0.5);
+            --radius: 8px;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-pill: 999px;
+            --control-height: 40px;
+            --text-xs: 12px;
+            --text-sm: 13px;
+            --text-base: 14px;
+            --text-md: 16px;
+            --shadow: 0 4px 6px -1px var(--shadow-color), 0 2px 4px -1px var(--shadow-color-soft);
+            --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.08);
+            --shadow-md: 0 16px 40px -16px rgba(15, 23, 42, 0.24);
+            --progress-track: #e5e7eb;
+            --disabled-bg: #e5e7eb;
+            --disabled-text: #64748b;
+            --testing-bg: #fef3c7;
+            --testing-text: #b45309;
+            --done-bg: #d1fae5;
+            --done-text: #047857;
+            --log-head-bg: #0b1220;
+            --log-head-text: #cbd5e1;
+            --toast-bg: #111827;
+            --toast-text: #f8fafc;
+            --toast-border: rgba(255, 255, 255, 0.08);
+        }
+
+        body.dark-theme {
+            --bg-color: #0f172a;
+            --card-bg: #111827;
+            --text-main: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --border-color: #374151;
+            --shadow-color: rgba(0, 0, 0, 0.35);
+            --shadow-color-soft: rgba(0, 0, 0, 0.25);
+            --surface-muted: #1f2937;
+            --surface-strong: #111827;
+            --input-bg: #0f172a;
+            --status-bg: #052e2b;
+            --status-text: #6ee7b7;
+            --log-bg: #020617;
+            --log-text: #34d399;
+            --modal-overlay-bg: rgba(2, 6, 23, 0.72);
+            --progress-track: #334155;
+            --disabled-bg: #1f2937;
+            --disabled-text: #64748b;
+            --testing-bg: rgba(245, 158, 11, 0.16);
+            --testing-text: #fbbf24;
+            --done-bg: rgba(16, 185, 129, 0.16);
+            --done-text: #6ee7b7;
+            --log-head-bg: #020617;
+            --log-head-text: #94a3b8;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.28);
+            --shadow-md: 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+            --toast-bg: #e5e7eb;
+            --toast-text: #0f172a;
+            --toast-border: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 15px;
+            line-height: 1.5;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        .container {
+            /* 限宽居中，超宽屏下表单和表格不再被无限拉伸 */
+            width: 100%;
+            max-width: 1200px;
+            box-sizing: border-box;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 22px 26px 24px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+        }
+
+        .page-header {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+            align-items: center;
+            gap: 12px 20px;
+            margin-bottom: 22px;
+            padding: 2px 0 6px;
+        }
+
+        .page-title-wrap {
+            justify-self: start;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 12px;
+            min-width: 0;
+        }
+
+        .page-title-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+            font-weight: 500;
+        }
+
+        .page-title {
+            color: var(--text-main);
+            margin: 0;
+            font-size: 1.5rem;
+            text-align: left;
+            font-weight: 700;
+        }
+
+        .theme-cycle {
+            display: inline-flex;
+            width: var(--control-height);
+            height: var(--control-height);
+            flex: 0 0 auto;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            background: var(--surface-muted);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .theme-cycle:hover {
+            background: var(--card-bg);
+            border-color: var(--text-secondary);
+            color: var(--text-main);
+        }
+
+        .theme-cycle .icon {
+            display: none;
+            width: 18px;
+            height: 18px;
+        }
+
+        .theme-cycle[data-theme-mode="auto"] .icon-auto,
+        .theme-cycle[data-theme-mode="light"] .icon-sun,
+        .theme-cycle[data-theme-mode="dark"] .icon-moon {
+            display: block;
+        }
+
+        .mode-switcher {
+            justify-self: center;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            height: var(--control-height);
+            padding: 3px;
+            border: 1px solid var(--border-color);
+            background: var(--surface-muted);
+            border-radius: var(--radius-pill);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+
+        .mode-pill {
+            min-width: 84px;
+            height: 32px;
+            padding: 0 14px;
+            border: none;
+            border-radius: var(--radius-pill);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .mode-pill.active {
+            background: var(--primary-color);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+        }
+
+        .mode-pill:hover {
+            color: var(--text-main);
+        }
+
+        .mode-pill.active:hover {
+            color: #fff;
+        }
+
+        .header-right {
+            justify-self: end;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-sizing: border-box;
+            height: 40px;
+            padding: 0 12px;
+            border: 1px solid rgba(16, 185, 129, 0.28);
+            border-radius: var(--radius-pill);
+            background: var(--status-bg);
+            color: var(--status-text);
+            font-size: var(--text-xs);
+            font-weight: 600;
+            line-height: 1;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: var(--success-color);
+        }
+
+        .status-badge.connecting {
+            background: var(--surface-muted);
+            color: var(--text-secondary);
+            border-color: var(--border-color);
+        }
+
+        .status-badge.connecting::before {
+            background: var(--text-secondary);
+        }
+
+        .status-badge.disconnected {
+            background: #fef2f2;
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+
+        .status-badge.disconnected::before {
+            background: var(--error-color);
+        }
+
+        body.dark-theme .status-badge.disconnected {
+            background: rgba(127, 29, 29, 0.22);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.32);
+        }
+
+        /* IPv6 状态胶囊：沿用连接状态胶囊的形态，额外支持点击重新检测 */
+        .ipv6-badge {
+            flex: 0 0 auto;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .ipv6-badge:hover {
+            border-color: var(--text-secondary);
+        }
+
+        .ipv6-badge:focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        /* 有 IPv6 地址但公网探测不通，单独用 warning 色区别于明确的「不可用」 */
+        .ipv6-badge.unknown {
+            background: #fffbeb;
+            color: #b45309;
+            border-color: #fde68a;
+        }
+
+        .ipv6-badge.unknown::before {
+            background: var(--warning-color);
+        }
+
+        body.dark-theme .ipv6-badge.unknown {
+            background: rgba(245, 158, 11, 0.14);
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.32);
+        }
+
+        .header-close {
+            width: var(--control-height);
+            height: var(--control-height);
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            background: var(--surface-muted);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+        }
+
+        .header-close .icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        .header-close:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: var(--error-color);
+        }
+
+        .header-close:disabled {
+            background: var(--surface-muted);
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            opacity: 0.45;
+        }
+
+        .section-icon {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        /* 控制区域 */
+        .controls {
+            background: var(--surface-muted);
+            border: 1px solid var(--border-color);
+            padding: 18px;
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .controls-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            align-items: end;
+        }
+
+        .controls-row-wide {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        select, input:not([type="checkbox"]) {
+            height: var(--control-height);
+            padding: 0 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: var(--text-base);
+            background: var(--input-bg);
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        select:focus, input:not([type="checkbox"]):focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+        }
+
+        /* 进度条 */
+        .progress-container {
+            width: 100%;
+            background-color: var(--progress-track);
+            border-radius: var(--radius-pill);
+            margin: 16px 0 20px;
+            height: 18px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(45deg, var(--primary-color) 25%, #60a5fa 25%, #60a5fa 50%, var(--primary-color) 50%, var(--primary-color) 75%, #60a5fa 75%, #60a5fa);
+            background-size: 20px 20px;
+            animation: stripe 1s linear infinite;
+            text-align: center;
+            line-height: 18px;
+            color: white;
+            font-size: var(--text-xs);
+            transition: width 0.3s ease;
+        }
+
+        .progress-bar.progress-warning {
+            background-image: linear-gradient(45deg, var(--warning-color) 25%, #fbbf24 25%, #fbbf24 50%, var(--warning-color) 50%, var(--warning-color) 75%, #fbbf24 75%, #fbbf24);
+        }
+
+        .progress-bar.progress-complete {
+            background-image: linear-gradient(45deg, var(--success-color) 25%, #34d399 25%, #34d399 50%, var(--success-color) 50%, var(--success-color) 75%, #34d399 75%, #34d399);
+        }
+
+        @keyframes stripe {
+            0% { background-position: 0 0; }
+            100% { background-position: 20px 20px; }
+        }
+
+        /* 选项卡 */
+        .tabs-wrap {
+            display: flex;
+            justify-content: center;
+            margin: 6px 0 22px;
+        }
+
+        .tabs {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            padding: 3px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-pill);
+            background: var(--surface-muted);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+
+        .tab {
+            min-height: 34px;
+            padding: 0 18px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            background: transparent;
+            font: inherit;
+            font-size: var(--text-sm);
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-pill);
+            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+
+        .tab.active {
+            color: var(--text-main);
+            background: var(--card-bg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 内容区块 */
+        .section-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 10px;
+            margin: -16px -16px 16px;
+            padding: 13px 18px;
+            background: var(--surface-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius-sm);
+            background: rgba(59, 130, 246, 0.12);
+            color: var(--primary-color);
+        }
+
+        .section-icon .icon {
+            width: 15px;
+            height: 15px;
+        }
+
+        .section-title {
+            margin: 0;
+            font-size: var(--text-md);
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .section-desc {
+            margin: 0 0 14px 0;
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+            line-height: 1.55;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            padding: 2px 8px;
+            border-radius: var(--radius-pill);
+            background: var(--primary-color);
+            color: white;
+            font-size: var(--text-xs);
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        /* 表格样式 */
+        .scroll-table, .scroll-table-lg {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--card-bg);
+        }
+
+        .scroll-table { max-height: 300px; }
+        .scroll-table-lg { max-height: 500px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+            font-size: var(--text-base);
+        }
+
+        th, td {
+            padding: 11px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        td {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .section-header-actions {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        #btnAutoSpeed {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            min-height: 24px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        }
+
+        #btnAutoSpeed .icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        #btnAutoSpeed:hover {
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        }
+
+        #btnAutoSpeed.loading {
+            background: var(--warning-color);
+            animation: auto-speed-pulse 1.1s ease-out infinite;
+        }
+
+        @keyframes auto-speed-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.85); }
+            70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        #btnAutoSpeed:disabled {
+            background: var(--disabled-bg);
+            color: var(--disabled-text);
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        #qHistoryClear {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            min-height: 24px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            background: var(--error-color);
+        }
+
+        #qHistoryClear .icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        #qHistoryClear:hover {
+            color: #fff;
+            background: var(--error-color);
+            filter: brightness(0.94);
+        }
+
+        #qHistoryClear:disabled {
+            background: var(--disabled-bg);
+            color: var(--disabled-text);
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .speed-result-cell {
+            min-width: 96px;
+            white-space: nowrap;
+        }
+
+        /* ----------------------- 快速优选 ----------------------- */
+        .mode-panel { display: none; }
+        .mode-panel.active { display: block; }
+
+        .quick-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .quick-title {
+            margin: 0;
+            font-size: var(--text-md);
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .quick-filter-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .filter-btn {
+            width: 100%;
+            height: var(--control-height);
+            padding: 0 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--input-bg);
+            color: var(--text-main);
+            font-size: var(--text-base);
+            text-align: left;
+            cursor: pointer;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .filter-btn:hover { border-color: var(--primary-color); }
+
+        .full-url-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .full-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+        }
+
+        .round-btn {
+            width: 52px;
+            height: 52px;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid transparent;
+            border-radius: 50%;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        .round-btn .icon {
+            width: 20px;
+            height: 20px;
+            display: none;
+        }
+
+        .round-btn[data-state="play"] .icon-play,
+        .round-btn[data-state="pause"] .icon-pause,
+        .round-btn[data-state="stop"] .icon-stop,
+        .round-btn[data-state="pending"] .icon-dots,
+        .round-btn[data-state="reset"] .icon-reset {
+            display: block;
+        }
+
+        .round-btn.primary {
+            background: var(--primary-color);
+        }
+
+        .round-btn.primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .round-btn.warning {
+            background: var(--warning-color);
+        }
+
+        .round-btn.warning:hover {
+            background: #d97706;
+        }
+
+        .round-btn.neutral {
+            background: var(--surface-muted);
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+            box-shadow: none;
+        }
+
+        .round-btn.neutral:hover {
+            color: var(--text-main);
+            border-color: var(--text-secondary);
+        }
+
+        .round-btn.danger {
+            background: var(--error-color);
+        }
+
+        .round-btn.danger:hover {
+            background: #dc2626;
+        }
+
+        .round-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .round-btn:active {
+            transform: scale(0.96);
+        }
+
+        .round-btn:disabled {
+            background: var(--disabled-bg) !important;
+            border-color: var(--disabled-bg);
+            color: var(--disabled-text);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.9;
+        }
+
+        .quick-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 46px;
+            margin: 10px 0 18px;
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--surface-muted);
+            color: var(--text-main);
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.35;
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .quick-status::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: var(--text-secondary);
+        }
+
+        .quick-status.running {
+            color: var(--primary-color);
+            border-color: rgba(59, 130, 246, 0.28);
+            background: rgba(59, 130, 246, 0.07);
+        }
+
+        .quick-status.running::before {
+            background: var(--primary-color);
+        }
+
+        .quick-status.success {
+            background: var(--status-bg);
+            color: var(--status-text);
+            border-color: rgba(16, 185, 129, 0.32);
+        }
+
+        .quick-status.success::before {
+            background: var(--success-color);
+        }
+
+        .quick-status.stopped {
+            color: var(--warning-color);
+            border-color: rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .quick-status.stopped::before {
+            background: var(--warning-color);
+        }
+
+        .quick-status.error {
+            color: var(--error-color);
+            border-color: rgba(239, 68, 68, 0.28);
+            background: rgba(239, 68, 68, 0.07);
+        }
+
+        .quick-status.error::before {
+            background: var(--error-color);
+        }
+
+        .quick-result {
+            border-color: rgba(16, 185, 129, 0.35);
+        }
+
+        .quick-result .section-header {
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .quick-result-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .quick-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+            padding: 11px 13px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--surface-muted);
+        }
+
+        .quick-label {
+            color: var(--text-secondary);
+            font-size: var(--text-xs);
+            font-weight: 600;
+        }
+
+        .quick-value {
+            color: var(--text-main);
+            font-size: 15px;
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* IPv6 地址超过卡片宽度时换行显示，不再被省略号截断 */
+        #qResultIp {
+            white-space: normal;
+            overflow-wrap: anywhere;
+            line-height: 1.35;
+        }
+
+        .quick-history-hint {
+            margin-left: auto;
+            color: var(--text-secondary);
+            font-size: var(--text-xs);
+            white-space: nowrap;
+        }
+
+        .empty-hint {
+            display: none;
+            margin-top: 12px;
+            padding: 22px 16px;
+            border: 1px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+            line-height: 1.6;
+        }
+
+        .empty-hint.show { display: block; }
+
+        .dc-filter-modal { width: min(680px, 100%); }
+        .dc-filter-modal h3 { margin-bottom: 6px; }
+        .dc-filter-modal p { margin: 0 0 12px; }
+        .dc-filter-modal input { margin-bottom: 10px; }
+
+        .dc-filter-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .mini-btn {
+            min-height: 32px;
+            padding: 0 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--surface-muted);
+            color: var(--text-main);
+            font-size: var(--text-xs);
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .mini-btn:hover { border-color: var(--primary-color); }
+
+        .dc-filter-count {
+            margin-left: auto;
+            color: var(--text-secondary);
+            font-size: var(--text-xs);
+        }
+
+        .dc-filter-list {
+            max-height: 420px;
+            overflow: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--input-bg);
+        }
+
+        .dc-group { border-bottom: 1px solid var(--border-color); }
+        .dc-group:last-child { border-bottom: none; }
+
+        .dc-group-header {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: var(--surface-muted);
+        }
+
+        .dc-group-header input[type="checkbox"],
+        .dc-country-header input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+            padding: 0;
+            flex: 0 0 auto;
+        }
+
+        .dc-group-toggle {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: var(--text-main);
+            font: inherit;
+            font-size: var(--text-sm);
+            font-weight: 700;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .dc-chevron {
+            width: 14px;
+            color: var(--text-secondary);
+            font-size: var(--text-xs);
+        }
+
+        .dc-group-count {
+            color: var(--text-secondary);
+            font-size: var(--text-xs);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .dc-group-selected {
+            color: var(--success-color);
+            font-size: var(--text-xs);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .dc-group-items {
+            padding: 2px 12px 12px 38px;
+            background: var(--card-bg);
+        }
+
+        .dc-country { margin-top: 8px; }
+
+        .dc-country-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            color: var(--text-secondary);
+            font-size: var(--text-xs);
+            font-weight: 600;
+        }
+
+        .dc-country-count {
+            color: var(--text-secondary);
+            font-size: var(--text-xs);
+            font-weight: 400;
+        }
+
+        .dc-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 4px 0 6px;
+        }
+
+        .dc-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 9px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-pill);
+            background: var(--surface-muted);
+            color: var(--text-secondary);
+            font-size: var(--text-xs);
+            white-space: nowrap;
+        }
+
+        .dc-chip.selected {
+            border-color: var(--success-color);
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--status-text);
+        }
+
+        .dc-chip code {
+            margin-right: 4px;
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        .dc-chip.selected code { color: var(--status-text); }
+
+        .dc-filter-hint {
+            min-height: 18px;
+            margin-top: 6px;
+            color: var(--error-color);
+            font-size: 12px;
+        }
+
+        .scan-ip-cell,
+        .dc-text-cell,
+        .test-ip-cell,
+        .metric-cell,
+        .speed-result {
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: var(--surface-strong);
+            font-weight: 600;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            white-space: nowrap;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: var(--surface-muted); }
+
+        /* 小按钮样式 */
+        .action-btn {
+            min-height: 32px;
+            padding: 0 12px;
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: var(--text-xs);
+            font-weight: 600;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .action-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .action-btn.selected {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: #ffffff;
+        }
+
+        .action-btn.loading {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #ffffff;
+        }
+
+        .action-btn:disabled {
+            background-color: var(--disabled-bg);
+            border-color: var(--disabled-bg);
+            color: var(--disabled-text);
+        }
+
+        .action-btn.loading:disabled {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #ffffff;
+            opacity: 1;
+        }
+
+        /* 点击复制的样式 */
+        .copy-ip {
+            cursor: pointer;
+            border-bottom: 1px dashed #9ca3af;
+            position: relative;
+            transition: color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+        }
+        .copy-ip:hover {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        .copy-ip:active {
+            opacity: 0.7;
+        }
+
+        /* 日志窗口 */
+        .log-panel {
+            margin-top: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: var(--log-bg);
+        }
+
+        .log-toggle {
+            width: 100%;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 14px;
+            border: none;
+            background: var(--log-head-bg);
+            color: var(--log-head-text);
+            font: inherit;
+            font-size: var(--text-xs);
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .log-toggle .icon {
+            width: 15px;
+            height: 15px;
+        }
+
+        .log-toggle .log-chevron {
+            margin-left: auto;
+            transition: transform 0.2s ease;
+        }
+
+        .log-panel.collapsed .log-chevron {
+            transform: rotate(-90deg);
+        }
+
+        .log-panel.collapsed .log-box {
+            display: none;
+        }
+
+        .log-box {
+            height: 180px;
+            overflow-y: auto;
+            background: var(--log-bg);
+            color: var(--log-text);
+            padding: 12px 14px;
+            border-radius: 0;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: var(--text-xs);
+            margin-top: 0;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 28px;
+            z-index: 2000;
+            max-width: min(90vw, 420px);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 10px 18px;
+            border: 1px solid var(--toast-border);
+            border-radius: var(--radius-pill);
+            background: var(--toast-bg);
+            color: var(--toast-text);
+            font-size: var(--text-sm);
+            font-weight: 600;
+            box-shadow: var(--shadow-md);
+            opacity: 0;
+            pointer-events: none;
+            transform: translate(-50%, 12px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .svg-sprite {
+            position: absolute;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .icon {
+            width: 1em;
+            height: 1em;
+            flex: 0 0 auto;
+            pointer-events: none;
+        }
+
+        select option {
+            background: var(--input-bg);
+            color: var(--text-main);
+        }
+
+        button:focus-visible,
+        .filter-btn:focus-visible,
+        .tab:focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        .mobile-short-label { display: none; }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--modal-overlay-bg);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            width: min(420px, 100%);
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 22px;
+        }
+
+        .modal h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+
+        .modal p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: var(--text-base);
+            white-space: pre-line;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .modal-btn {
+            min-height: 40px;
+            padding: 0 16px;
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            font-size: var(--text-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .modal-btn:hover {
+            filter: brightness(0.96);
+        }
+
+        .modal-btn.primary {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        .modal-btn.secondary {
+            background: var(--surface-muted);
+            border-color: var(--border-color);
+            color: var(--text-main);
+        }
+
+        /* 状态标签 */
+        .test-status {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: var(--radius-pill);
+            font-size: var(--text-xs);
+            font-weight: 600;
+        }
+        .test-status.testing { background: var(--testing-bg); color: var(--testing-text); }
+        .test-status.done { background: var(--done-bg); color: var(--done-text); }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 15px 15px 17px; border-radius: var(--radius-md); }
+            .page-header { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 6px; padding-bottom: 0; margin-bottom: 14px; }
+            .page-title { font-size: 1.25rem; }
+            .page-title-wrap { width: 100%; order: 1; gap: 6px 8px; }
+            .mode-switcher { width: auto; flex: 1 1 auto; min-width: 146px; justify-content: center; order: 2; margin-top: 0; }
+            .mode-pill { flex: 1 1 0; min-width: 0; padding: 0 8px; }
+            .header-right { display: contents; }
+            .status-badge { flex: 0 0 auto; order: 3; gap: 4px; padding: 0 8px; }
+            .ipv6-badge { order: 0; }
+            .theme-cycle { order: 4; }
+            .header-close { order: 5; }
+            .tabs-wrap { justify-content: stretch; }
+            .tabs { display: flex; width: 100%; }
+            .tab { flex: 1; text-align: center; }
+            .controls { padding: 14px; }
+            .controls-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+            .controls-row-wide { grid-template-columns: 1fr; }
+            .full-url-row { grid-template-columns: minmax(0, 1fr) auto; }
+            .full-actions { gap: 8px; }
+            .quick-filter-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+            .quick-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            #qResultSpeed {
+                /* Mbps 与括号备注在窄屏下允许换行，避免被省略号截断 */
+                white-space: normal;
+                overflow: visible;
+            }
+            .form-group label { font-size: var(--text-sm); margin-bottom: 4px; text-align: left; }
+            select, input:not([type="checkbox"]) { height: 38px; padding: 0 10px; font-size: var(--text-sm); }
+            .round-btn { width: 48px; height: 48px; }
+            th, td { padding: 10px 12px; font-size: var(--text-sm); }
+            .log-box { height: 160px; }
+            .modal { padding: 18px; }
+
+            /* 小屏横向滚动时固定首列，始终能看到 IP / 数据中心 */
+            .scroll-table table th:first-child,
+            .scroll-table table td:first-child,
+            .scroll-table-lg table th:first-child,
+            .scroll-table-lg table td:first-child {
+                position: sticky;
+                left: 0;
+                z-index: 2;
+                background: var(--card-bg);
+                box-shadow: 1px 0 0 var(--border-color);
+            }
+
+            .scroll-table table th:first-child,
+            .scroll-table-lg table th:first-child {
+                z-index: 3;
+                background: var(--surface-strong);
+            }
+
+            /* IPv6 地址较长，固定首列限宽并允许换行，避免占满视口 */
+            #scanTable th:first-child,
+            #scanTable td:first-child,
+            #testTable th:first-child,
+            #testTable td:first-child,
+            #qHistoryTable th:first-child,
+            #qHistoryTable td:first-child {
+                width: 110px;
+                white-space: normal;
+            }
+
+            #scanTable td:first-child .copy-ip,
+            #testTable td:first-child .copy-ip,
+            #qHistoryTable td:first-child .copy-ip {
+                white-space: normal;
+                overflow-wrap: anywhere;
+                line-height: 1.35;
+            }
+
+            #testTable th:first-child,
+            #testTable td:first-child {
+                min-width: 110px;
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+
+            #testTable {
+                min-width: 0;
+            }
+
+            #testTable .speed-result-cell {
+                min-width: 0;
+            }
+
+            #testTable .action-btn {
+                white-space: nowrap;
+            }
+        }
+
+        /* 手机竖屏下表格按最小宽度 600 布局，IP 列会被压到 ~70px，
+           IPv6 会被逐字符拆成 7 行；给首列兜底最小宽度，保持 2–3 行。 */
+        @media (max-width: 600px) {
+            #scanTable th:first-child,
+            #scanTable td:first-child,
+            #testTable th:first-child,
+            #testTable td:first-child,
+            #qHistoryTable th:first-child,
+            #qHistoryTable td:first-child {
+                min-width: 140px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .controls { padding: 12px; }
+            .controls-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+            .quick-result-grid { grid-template-columns: 1fr; }
+            .form-group label { font-size: var(--text-xs); margin-bottom: 3px; text-align: left; }
+            .mobile-short-label { display: inline; }
+            .mobile-full-label { display: none; }
+            select, input:not([type="checkbox"]) { height: 38px; padding: 0 9px; font-size: var(--text-sm); }
+            .modal-actions { gap: 8px; }
+        }
+
+        @media (max-width: 340px) {
+            .page-header { gap: 14px 4px; }
+            .mode-pill { padding: 0 8px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <svg class="svg-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+        <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5.2v13.6L19 12z" fill="currentColor"/></symbol>
+        <symbol id="icon-pause" viewBox="0 0 24 24"><rect x="7" y="5" width="3.6" height="14" rx="1" fill="currentColor"/><rect x="13.4" y="5" width="3.6" height="14" rx="1" fill="currentColor"/></symbol>
+        <symbol id="icon-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor"/></symbol>
+        <symbol id="icon-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18" cy="12" r="1.8" fill="currentColor"/></symbol>
+        <symbol id="icon-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.3"/><path d="M3 4v5h5"/></symbol>
+        <symbol id="icon-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+        <symbol id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></symbol>
+        <symbol id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></symbol>
+        <symbol id="icon-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.6 2.6L16.5 9"/></symbol>
+        <symbol id="icon-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor" stroke="none"/></symbol>
+        <symbol id="icon-server" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></symbol>
+        <symbol id="icon-radar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-4"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
+        <symbol id="icon-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.2 17a9 9 0 1 1 15.6 0"/><path d="M12 13l4-3"/><circle cx="12" cy="13" r="1.4" fill="currentColor" stroke="none"/></symbol>
+        <symbol id="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></symbol>
+        <symbol id="icon-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-5-6-5"/><path d="M12 19h8"/></symbol>
+        <symbol id="icon-bolt" viewBox="0 0 24 24"><path d="M13.2 2 4.8 13.3h5.7l-1 8.7 8.7-11.6h-5.8z" fill="currentColor"/></symbol>
+        <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6.5 7l.8 12a1 1 0 0 0 1 1h7.4a1 1 0 0 0 1-1l.8-12"/><path d="M10 11v5M14 11v5"/></symbol>
+    </svg>
+    <div class="container">
+        <div class="page-header">
+            <div class="page-title-wrap">
+                <div class="page-title-text">
+                    <h1 class="page-title">Cloudflare IP Scan</h1>
+                    <div class="page-subtitle">扫描、测速与筛选 Cloudflare IP</div>
+                </div>
+                <button type="button" id="ipv6StatusBtn" class="status-badge ipv6-badge connecting" aria-live="polite" title="正在检测当前网络是否支持 IPv6（点击可重新检测）" aria-label="正在检测当前网络是否支持 IPv6，点击可重新检测">IPv6</button>
+            </div>
+            <div class="mode-switcher" role="tablist" aria-label="工作模式">
+                <button type="button" class="mode-pill active" id="modeQuick" data-mode="quick" role="tab" aria-selected="true" aria-controls="quickPanel" title="快速模式" aria-label="快速模式">快速模式</button>
+                <button type="button" class="mode-pill" id="modeFull" data-mode="full" role="tab" aria-selected="false" aria-controls="fullPanel" tabindex="-1" title="完整模式" aria-label="完整模式">完整模式</button>
+            </div>
+            <div class="header-right">
+                <span id="status" class="status-badge connecting" role="status" title="正在连接服务器..." aria-label="正在连接服务器...">连接中</span>
+                <button type="button" class="theme-cycle" id="themeCycleBtn" data-theme-mode="auto" title="主题：自动（点击切换）" aria-label="主题：自动，点击切换">
+                    <svg class="icon icon-auto" aria-hidden="true"><use href="#icon-auto"/></svg>
+                    <svg class="icon icon-sun" aria-hidden="true"><use href="#icon-sun"/></svg>
+                    <svg class="icon icon-moon" aria-hidden="true"><use href="#icon-moon"/></svg>
+                </button>
+                <button type="button" id="btnShutdown" class="header-close" title="关闭程序" aria-label="关闭程序"><svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg></button>
+            </div>
+        </div>
+
+        <!-- 快速模式 -->
+        <div id="quickPanel" class="mode-panel active" role="tabpanel" aria-labelledby="modeQuick">
+            <div class="controls">
+                <div class="quick-head">
+                    <div>
+                        <h3 class="quick-title">快速优选</h3>
+                    </div>
+                </div>
+
+                <div class="controls-row">
+                    <div class="form-group">
+                        <label for="qIpType">IP类型</label>
+                        <select id="qIpType">
+                            <option value="4">IPv4</option>
+                            <option value="6">IPv6</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="qTargetMbps"><span class="mobile-full-label">目标带宽(Mbps)</span><span class="mobile-short-label">目标(Mbps)</span></label>
+                        <input type="number" id="qTargetMbps" value="50" min="1" max="10000" step="1" placeholder="默认50">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="qPort"><span class="mobile-full-label">扫描/测速端口</span><span class="mobile-short-label">端口</span></label>
+                        <select id="qPort">
+                            <optgroup label="HTTPS (默认)">
+                                <option value="443" selected>443</option>
+                                <option value="2053">2053</option>
+                                <option value="2083">2083</option>
+                                <option value="2087">2087</option>
+                                <option value="2096">2096</option>
+                                <option value="8443">8443</option>
+                            </optgroup>
+                            <optgroup label="HTTP">
+                                <option value="80">80</option>
+                                <option value="8080">8080</option>
+                                <option value="8880">8880</option>
+                                <option value="2052">2052</option>
+                                <option value="2082">2082</option>
+                                <option value="2086">2086</option>
+                                <option value="2095">2095</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="controls-row-wide">
+                    <div class="form-group">
+                        <label for="qSpeedUrl">测速 URL</label>
+                        <input type="text" id="qSpeedUrl" value="speed.cloudflare.com/__down?bytes=10000000" placeholder="默认 speed.cloudflare.com/__down?bytes=10000000">
+                    </div>
+                </div>
+
+                <div class="quick-filter-row">
+                    <div class="form-group">
+                        <label for="qDCFilterBtn">数据中心筛选</label>
+                        <button type="button" id="qDCFilterBtn" class="filter-btn">全部数据中心</button>
+                    </div>
+                    <button type="button" id="qStart" class="round-btn primary" data-state="play" title="开始快速优选" aria-label="开始快速优选">
+                        <svg class="icon icon-play" aria-hidden="true"><use href="#icon-play"/></svg>
+                        <svg class="icon icon-stop" aria-hidden="true"><use href="#icon-stop"/></svg>
+                        <svg class="icon icon-dots" aria-hidden="true"><use href="#icon-dots"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="progress-container" id="qProgressBox" style="display:none;">
+                <div class="progress-bar" id="qProgressBar">准备中</div>
+            </div>
+            <div class="quick-status" id="qStatus" role="status" aria-live="polite">等待开始</div>
+
+            <div class="section-box quick-result" id="qResultBox" style="display:none;">
+                <div class="section-header">
+                    <span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#icon-check"/></svg></span>
+                    <h3 class="section-title">已找到达标 IP</h3>
+                    <span class="badge" id="qResultRound">第 0 轮</span>
+                </div>
+                <div class="quick-result-grid">
+                    <div class="quick-metric">
+                        <span class="quick-label">IP 地址</span>
+                        <span class="quick-value"><span id="qResultIp" class="copy-ip">—</span></span>
+                    </div>
+                    <div class="quick-metric">
+                        <span class="quick-label">数据中心</span>
+                        <span class="quick-value" id="qResultDC">—</span>
+                    </div>
+                    <div class="quick-metric">
+                        <span class="quick-label">延迟</span>
+                        <span class="quick-value" id="qResultLatency">—</span>
+                    </div>
+                    <div class="quick-metric">
+                        <span class="quick-label">实测速度</span>
+                        <span class="quick-value" id="qResultSpeed">—</span>
+                    </div>
+                    <div class="quick-metric">
+                        <span class="quick-label">目标带宽</span>
+                        <span class="quick-value" id="qResultTarget">—</span>
+                    </div>
+                    <div class="quick-metric">
+                        <span class="quick-label">用时</span>
+                        <span class="quick-value" id="qResultElapsed">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-box">
+                <div class="section-header">
+                    <span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#icon-list"/></svg></span>
+                    <h3 class="section-title">历史优选 IP</h3>
+                    <span class="badge" id="qHistoryCount">0</span>
+                    <div class="section-header-actions">
+                        <button type="button" id="qHistoryClear" class="action-btn"
+                                title="删除全部历史记录" aria-label="删除全部历史记录">
+                            <svg class="icon" aria-hidden="true"><use href="#icon-trash"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="scroll-table-lg">
+                    <table id="qHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>IP地址</th>
+                                <th>数据中心</th>
+                                <th>延迟</th>
+                                <th>实测速度</th>
+                                <th>时间</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="qHistoryEmpty" class="empty-hint show">暂无记录，开始快速优选后会显示每轮最佳结果。</div>
+            </div>
+        </div>
+
+        <!-- 完整模式 -->
+        <div id="fullPanel" class="mode-panel" role="tabpanel" aria-labelledby="modeFull">
+
+        <!-- 统一任务页面 -->
+        <div class="controls">
+            <div class="quick-head">
+                <div>
+                    <h3 class="quick-title">完整扫描</h3>
+                </div>
+            </div>
+            <div class="controls-row">
+                <div class="form-group">
+                    <label for="ipType"><span class="mobile-full-label">IP类型</span><span class="mobile-short-label">IP类型</span></label>
+                    <select id="ipType">
+                        <option value="4">IPv4</option>
+                        <option value="6">IPv6</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="scanThreads"><span class="mobile-full-label">并发数</span><span class="mobile-short-label">并发数</span></label>
+                    <input type="number" id="scanThreads" value="100" placeholder="默认100">
+                </div>
+
+                <div class="form-group">
+                    <label for="testPort"><span class="mobile-full-label">扫描/测速端口</span><span class="mobile-short-label">端口</span></label>
+                    <select id="testPort">
+                        <optgroup label="HTTPS (默认)">
+                            <option value="443" selected>443</option>
+                            <option value="2053">2053</option>
+                            <option value="2083">2083</option>
+                            <option value="2087">2087</option>
+                            <option value="2096">2096</option>
+                            <option value="8443">8443</option>
+                        </optgroup>
+                        <optgroup label="HTTP">
+                            <option value="80">80</option>
+                            <option value="8080">8080</option>
+                            <option value="8880">8880</option>
+                            <option value="2052">2052</option>
+                            <option value="2082">2082</option>
+                            <option value="2086">2086</option>
+                            <option value="2095">2095</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+
+            <div class="controls-row-wide full-url-row">
+                <div class="form-group">
+                    <label for="speedUrl">测速 URL</label>
+                    <input type="text" id="speedUrl" value="speed.cloudflare.com/__down?bytes=10000000" placeholder="默认 speed.cloudflare.com/__down?bytes=10000000">
+                </div>
+
+                <div class="full-actions">
+                    <button type="button" id="btnRestoreDefaults" class="round-btn neutral" data-state="reset" title="恢复默认设置" aria-label="恢复默认设置">
+                        <svg class="icon icon-reset" aria-hidden="true"><use href="#icon-reset"/></svg>
+                    </button>
+                    <button type="button" id="btnStopScan" class="round-btn danger" data-state="stop" title="取消扫描" aria-label="取消扫描" style="display:none;">
+                        <svg class="icon icon-stop" aria-hidden="true"><use href="#icon-stop"/></svg>
+                        <svg class="icon icon-dots" aria-hidden="true"><use href="#icon-dots"/></svg>
+                    </button>
+                    <button type="button" id="btnStart" class="round-btn primary" data-state="play" title="开始扫描" aria-label="开始扫描">
+                        <svg class="icon icon-play" aria-hidden="true"><use href="#icon-play"/></svg>
+                        <svg class="icon icon-pause" aria-hidden="true"><use href="#icon-pause"/></svg>
+                        <svg class="icon icon-stop" aria-hidden="true"><use href="#icon-stop"/></svg>
+                        <svg class="icon icon-dots" aria-hidden="true"><use href="#icon-dots"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-container" id="progressBox">
+            <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+
+        <div class="tabs-wrap">
+            <div class="tabs" role="tablist" aria-label="结果视图">
+                <button type="button" class="tab active" id="tabScan" data-tab="scan" role="tab" aria-selected="true" aria-controls="scan">扫描结果</button>
+                <button type="button" class="tab" id="tabTest" data-tab="test" role="tab" aria-selected="false" aria-controls="test" tabindex="-1">详细测试</button>
+            </div>
+        </div>
+
+        <!-- 扫描结果页面 -->
+        <div id="scan" class="tab-content active" role="tabpanel" aria-labelledby="tabScan">
+            <!-- 数据中心汇总 -->
+            <div class="section-box" id="dcSection" style="display:none;">
+                <div class="section-header">
+                    <span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#icon-server"/></svg></span>
+                    <h3 class="section-title">数据中心汇总</h3>
+                    <span class="badge" id="dcCount">0</span>
+                    <span id="currentTestDC" class="test-status" style="display:none;"></span>
+                </div>
+                <p class="section-desc">点击下方"选择测试"对指定数据中心的IP进行详细测速。</p>
+                <div class="scroll-table">
+                    <table id="dcTable">
+                        <thead>
+                            <tr>
+                                <th>数据中心</th>
+                                <th>地区</th>
+                                <th>城市</th>
+                                <th>IP数量</th>
+                                <th>最低延迟</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 实时扫描结果 -->
+            <div class="section-box">
+                <div class="section-header">
+                    <span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#icon-radar"/></svg></span>
+                    <h3 class="section-title">实时扫描结果</h3>
+                    <span class="badge" id="scanCount">0</span>
+                </div>
+                <div class="scroll-table-lg">
+                    <table id="scanTable">
+                        <thead>
+                            <tr>
+                                <th>IP地址</th>
+                                <th>数据中心</th>
+                                <th>地区</th>
+                                <th>城市</th>
+                                <th>延迟</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="scanEmpty" class="empty-hint show">暂无扫描结果，点击上方“开始扫描”后会实时显示。</div>
+            </div>
+        </div>
+
+        <!-- 详细测试结果页面 -->
+        <div id="test" class="tab-content" role="tabpanel" aria-labelledby="tabTest">
+            <div class="section-box">
+                <div class="section-header">
+                    <span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#icon-gauge"/></svg></span>
+                    <h3 class="section-title" id="testSectionTitle">详细测试结果</h3>
+                    <span class="badge" id="testCount">0</span>
+                    <div class="section-header-actions">
+                        <button type="button" id="btnAutoSpeed" class="action-btn auto-speed-btn"
+                                title="一键测速延迟最低的 3 个 IP" aria-label="一键测速延迟最低的 3 个 IP">
+                            <svg class="icon" aria-hidden="true"><use href="#icon-bolt"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <p class="section-desc">延迟来自扫描阶段，点击“测速”或右上角“一键测速”进行下载速度测试。</p>
+                <div class="scroll-table-lg">
+                    <table id="testTable">
+                        <thead>
+                            <tr>
+                                <th>IP地址</th>
+                                <th>延迟</th>
+                                <th>测速</th>
+                                <th>速度</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="testEmpty" class="empty-hint show">先在“扫描结果”中选择一个数据中心，这里会列出可测速的 IP。</div>
+            </div>
+        </div>
+
+        </div><!-- /fullPanel -->
+
+        <div class="log-panel" id="logPanel">
+            <button type="button" class="log-toggle" id="logToggle" aria-expanded="true" aria-controls="logBox">
+                <svg class="icon" aria-hidden="true"><use href="#icon-terminal"/></svg>
+                <span>运行日志</span>
+                <svg class="icon log-chevron" aria-hidden="true"><use href="#icon-chevron"/></svg>
+            </button>
+            <div class="log-box" id="logBox">
+                <div>[系统] 等待操作...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+            <h3 id="confirmTitle">请确认</h3>
+            <p id="confirmMessage"></p>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" id="confirmCancel">取消</button>
+                <button class="modal-btn primary" id="confirmOk">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="dcFilterModal">
+        <div class="modal dc-filter-modal" role="dialog" aria-modal="true" aria-labelledby="dcFilterTitle" aria-describedby="dcFilterDesc">
+            <h3 id="dcFilterTitle">数据中心筛选</h3>
+            <p id="dcFilterDesc">默认选择全部数据中心；可按大区或国家/地区分组筛选，勾选国家/地区即选择其全部数据中心。</p>
+            <input type="text" id="dcFilterSearch" aria-label="搜索大区、国家、数据中心或城市" placeholder="搜索大区 / 国家 / 数据中心 / 城市">
+            <div class="dc-filter-toolbar">
+                <button type="button" id="dcSelectAll" class="mini-btn">全选</button>
+                <button type="button" id="dcSelectNone" class="mini-btn">清空</button>
+                <span id="dcFilterCount" class="dc-filter-count"></span>
+            </div>
+            <div class="dc-filter-list" id="dcFilterList"></div>
+            <div id="dcFilterHint" class="dc-filter-hint"></div>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn secondary" id="dcFilterCancel">取消</button>
+                <button type="button" class="modal-btn primary" id="dcFilterApply">应用</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+        (() => {
+            'use strict';
+
+            const MAX_LOG_LINES = 500;
+            const MAX_SCAN_ROWS = 500;
+            const MAX_THREADS = 500;
+            const RECONNECT_MAX = 8000;
+            const AUTO_SPEED_COUNT = 3;
+            const AUTO_STEP_TIMEOUT = 25000;
+
+            let ws = null;
+            let reconnectTimer = null;
+            let reconnectDelay = 1000;
+
+            let isConnected = false;
+            let serverClosed = false;
+            let shuttingDown = false;
+            let statusText = '正在连接服务器...';
+            let ipv6Info = { state: 'checking', text: 'IPv6 检测中', detail: '正在检测当前网络是否支持 IPv6' };
+            let lastIPv6LogLine = '';
+            let wsConnectCount = 0;
+            let lastIPv6AutoAt = 0;
+            let ipv6ManualCheck = false;
+
+            // 任务运行状态以服务端 state_sync / scan_state 为准；
+            // 详细测试结果直接使用扫描阶段的数据，本地只维护当前查看的数据中心。
+            let taskRunning = false;
+            let taskKind = '';
+            let scanPaused = false;
+            let selectedDC = '';
+
+            let pendingStart = false;
+            let pausePending = false;
+            let busyPending = false;
+            let scanStopping = false;
+
+            let scanData = [];
+            let testData = [];
+            let dcList = [];
+            let scanProgressCurrent = 0;
+            let scanProgressTotal = 0;
+            let scanMatched = 0;
+            let scanPhase = '';
+            const speedCells = new Map();
+            const speedResults = new Map();
+            const speedInFlight = new Set();
+            const speedTimers = new Map();
+            let capNoticeCount = -1;
+
+            const autoSpeed = { active: false, queue: [], index: 0, currentIP: '' };
+            let autoStepTimer = null;
+            let autoAdvanceTimer = null;
+
+            const FAST_DEFAULT_TARGET = 50;
+            const FAST_HISTORY_LIMIT = 20;
+            let mode = 'quick';
+            const fastState = {
+                running: false,
+                round: 0,
+                phase: '',
+                current: 0,
+                total: 0,
+                currentIP: '',
+                targetMbps: FAST_DEFAULT_TARGET,
+                dcFilter: [],
+                history: [],
+                result: null,
+                message: '',
+            };
+            let fastPending = false;
+            let fastStopping = false;
+            let dcOptions = [];
+            let dcOptionsLoaded = false;
+            let dcFilter = []; // 空数组表示全部
+            let dcFilterDraft = new Set();
+            let dcFilterModalOpen = false;
+            let dcExpandedGroups = new Set();
+
+            const $ = (id) => document.getElementById(id);
+
+            function el(tag, className, text) {
+                const node = document.createElement(tag);
+                if (className) node.className = className;
+                if (text !== undefined && text !== null) node.textContent = String(text);
+                return node;
+            }
+
+            // ----------------------- 模式切换 -----------------------
+
+            function setMode(nextMode, silent) {
+                mode = nextMode === 'full' ? 'full' : 'quick';
+                const quickPanel = $('quickPanel');
+                const fullPanel = $('fullPanel');
+                if (quickPanel) quickPanel.classList.toggle('active', mode === 'quick');
+                if (fullPanel) fullPanel.classList.toggle('active', mode === 'full');
+                document.querySelectorAll('.mode-pill').forEach((btn) => {
+                    const active = btn.dataset.mode === mode;
+                    btn.classList.toggle('active', active);
+                    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+                    btn.tabIndex = active ? 0 : -1;
+                });
+                try {
+                    localStorage.setItem('cfdata_mode', mode);
+                } catch (err) {}
+                if (mode === 'quick' && !silent) renderQuick();
+                if (!silent && mode === 'quick' && taskRunning && taskKind === 'scan') {
+                    log('完整扫描仍在运行，请回到完整模式取消或继续扫描后再使用快速模式');
+                }
+            }
+
+            // ----------------------- 快速优选 -----------------------
+
+            function normalizeDCFilterClient(values) {
+                const seen = new Set();
+                const result = [];
+                for (const value of values || []) {
+                    const code = String(value || '').trim().toUpperCase();
+                    if (!code || seen.has(code)) continue;
+                    seen.add(code);
+                    result.push(code);
+                }
+                return result;
+            }
+
+            const DC_REGION_GROUPS = [
+                { key: 'asia', label: '亚洲', match: ['asia', 'middle east'] },
+                { key: 'europe', label: '欧洲', match: ['europe'] },
+                { key: 'americas', label: '美洲', match: ['north america', 'south america', 'americas'] },
+                { key: 'africa', label: '非洲', match: ['africa'] },
+                { key: 'oceania', label: '大洋洲', match: ['oceania'] },
+                { key: 'other', label: '其他', match: [] },
+            ];
+
+            const COUNTRY_NAMES = {
+                US: '美国', CA: '加拿大', MX: '墨西哥', BR: '巴西', AR: '阿根廷', CL: '智利',
+                GB: '英国', IE: '爱尔兰', DE: '德国', FR: '法国', NL: '荷兰', BE: '比利时',
+                CH: '瑞士', AT: '奥地利', IT: '意大利', ES: '西班牙', PT: '葡萄牙', PL: '波兰',
+                CZ: '捷克', SE: '瑞典', NO: '挪威', FI: '芬兰', DK: '丹麦', RU: '俄罗斯',
+                UA: '乌克兰', TR: '土耳其', GR: '希腊', RO: '罗马尼亚', HU: '匈牙利',
+                JP: '日本', KR: '韩国', CN: '中国', HK: '中国香港', TW: '中国台湾',
+                SG: '新加坡', MY: '马来西亚', TH: '泰国', VN: '越南', PH: '菲律宾',
+                ID: '印度尼西亚', IN: '印度', PK: '巴基斯坦', AE: '阿联酋', SA: '沙特阿拉伯',
+                IL: '以色列', QA: '卡塔尔', AU: '澳大利亚', NZ: '新西兰', ZA: '南非',
+                EG: '埃及', NG: '尼日利亚', KE: '肯尼亚', MA: '摩洛哥', TN: '突尼斯',
+            };
+
+            function countryLabel(code) {
+                const cc = String(code || '').toUpperCase();
+                if (!cc) return '未知';
+                return COUNTRY_NAMES[cc] ? COUNTRY_NAMES[cc] + ' · ' + cc : cc;
+            }
+
+            function regionKeyFor(region) {
+                const text = String(region || '').toLowerCase();
+                for (const def of DC_REGION_GROUPS) {
+                    if (def.match.some((item) => text.includes(item))) return def.key;
+                }
+                return 'other';
+            }
+
+            function buildDCGroups() {
+                const map = new Map();
+                DC_REGION_GROUPS.forEach((def) => {
+                    map.set(def.key, { key: def.key, label: def.label, items: [], countries: new Map() });
+                });
+                dcOptions.forEach((item) => {
+                    const group = map.get(regionKeyFor(item.region)) || map.get('other');
+                    group.items.push(item);
+                    const cc = String(item.cca2 || '').toUpperCase();
+                    if (!group.countries.has(cc)) group.countries.set(cc, []);
+                    group.countries.get(cc).push(item);
+                });
+                return Array.from(map.values())
+                    .filter((group) => group.items.length > 0)
+                    .map((group) => {
+                        group.items.sort((a, b) => String(a.code).localeCompare(String(b.code)));
+                        group.countries = new Map(Array.from(group.countries.entries()).sort((a, b) => {
+                            return countryLabel(a[0]).localeCompare(countryLabel(b[0]), 'zh-CN');
+                        }));
+                        return group;
+                    });
+            }
+
+            function selectedInList(items) {
+                let count = 0;
+                for (const item of items) {
+                    if (dcFilterDraft.has(item.code)) count++;
+                }
+                return count;
+            }
+
+            function updateDCFilterSummary() {
+                const btn = $('qDCFilterBtn');
+                if (!btn) return;
+                if (dcFilter.length === 0) {
+                    btn.textContent = '全部数据中心';
+                    btn.title = '全部数据中心';
+                    return;
+                }
+                if (!dcOptionsLoaded || dcOptions.length === 0) {
+                    btn.textContent = '已选 ' + dcFilter.length + ' 个数据中心';
+                    btn.title = dcFilter.join('、');
+                    return;
+                }
+
+                const selected = new Set(dcFilter);
+                const fullRegions = [];
+                const fullCountries = [];
+                let partialCodes = 0;
+                const groups = buildDCGroups();
+
+                groups.forEach((group) => {
+                    const groupSelected = group.items.filter((item) => selected.has(item.code)).length;
+                    if (groupSelected === group.items.length) {
+                        fullRegions.push(group.label);
+                        return;
+                    }
+                    group.countries.forEach((items, cc) => {
+                        const count = items.filter((item) => selected.has(item.code)).length;
+                        if (count === items.length) {
+                            fullCountries.push(countryLabel(cc));
+                        } else if (count > 0) {
+                            partialCodes += count;
+                        }
+                    });
+                });
+
+                if (fullRegions.length === groups.length && fullCountries.length === 0 && partialCodes === 0) {
+                    btn.textContent = '全部数据中心';
+                    btn.title = '全部数据中心';
+                    return;
+                }
+
+                const parts = [];
+                if (fullRegions.length) parts.push(...fullRegions);
+                if (fullCountries.length) parts.push(...fullCountries);
+                if (partialCodes > 0) parts.push(partialCodes + ' 个数据中心');
+                if (parts.length === 0) parts.push(dcFilter.length + ' 个数据中心');
+
+                btn.textContent = '已选：' + parts.join('、');
+                btn.title = btn.textContent;
+            }
+
+            function saveDCFilter() {
+                try {
+                    localStorage.setItem('cfdata_quick_dc_filter', JSON.stringify(dcFilter));
+                } catch (err) {}
+            }
+
+            function loadQuickSettings() {
+                try {
+                    const targetInput = $('qTargetMbps');
+                    const savedTarget = parseInt(localStorage.getItem('cfdata_quick_target'), 10);
+                    if (targetInput && Number.isFinite(savedTarget) && savedTarget >= 1 && savedTarget <= 10000) {
+                        targetInput.value = String(savedTarget);
+                    }
+
+                    const ipType = localStorage.getItem('cfdata_quick_ipv4');
+                    if (ipType === '6') {
+                        const input = $('qIpType');
+                        if (input) input.value = '6';
+                    }
+
+                    const portInput = $('qPort');
+                    const savedPort = parseInt(localStorage.getItem('cfdata_quick_port'), 10);
+                    if (portInput && Number.isFinite(savedPort) && Array.from(portInput.options).some((o) => o.value === String(savedPort))) {
+                        portInput.value = String(savedPort);
+                    }
+
+                    const savedUrl = localStorage.getItem('cfdata_speed_url');
+                    if (savedUrl) {
+                        const qUrl = $('qSpeedUrl');
+                        if (qUrl) qUrl.value = savedUrl;
+                    }
+
+                    const rawFilter = localStorage.getItem('cfdata_quick_dc_filter');
+                    if (rawFilter) {
+                        const parsed = JSON.parse(rawFilter);
+                        if (Array.isArray(parsed)) dcFilter = normalizeDCFilterClient(parsed);
+                    }
+                } catch (err) {}
+                updateDCFilterSummary();
+            }
+
+            function saveQuickSettings() {
+                try {
+                    const target = parseInt($('qTargetMbps').value, 10);
+                    if (Number.isFinite(target)) localStorage.setItem('cfdata_quick_target', String(target));
+                    const ipType = $('qIpType').value === '6' ? '6' : '4';
+                    localStorage.setItem('cfdata_quick_ipv4', ipType);
+                    const port = parseInt($('qPort').value, 10);
+                    if (Number.isFinite(port)) localStorage.setItem('cfdata_quick_port', String(port));
+                    const url = $('qSpeedUrl').value.trim();
+                    if (url) saveSpeedUrl(url);
+                } catch (err) {}
+                saveDCFilter();
+            }
+
+            function applyFastSnapshot(fast) {
+                fast = fast || {};
+                const running = !!fast.running;
+                fastState.running = running;
+                fastState.round = Number(fast.round) || 0;
+                fastState.phase = fast.phase || '';
+                fastState.current = Number(fast.current) || 0;
+                fastState.total = Number(fast.total) || 0;
+                fastState.currentIP = fast.currentIp || '';
+                fastState.history = Array.isArray(fast.history) ? fast.history.slice() : [];
+                fastState.result = fast.result || null;
+                fastState.message = fast.message || '';
+                fastPending = false;
+                if (running) {
+                    fastStopping = false;
+                    if (Number(fast.targetMbps) > 0) {
+                        fastState.targetMbps = Number(fast.targetMbps);
+                        const input = $('qTargetMbps');
+                        if (input) input.value = String(fastState.targetMbps);
+                    }
+                    if (Array.isArray(fast.dcFilter)) {
+                        dcFilter = normalizeDCFilterClient(fast.dcFilter);
+                        saveDCFilter();
+                    }
+                } else {
+                    fastStopping = false;
+                }
+                updateDCFilterSummary();
+                renderQuick();
+            }
+
+            function handleFastProgress(data) {
+                data = data || {};
+                fastState.running = true;
+                fastState.round = Number(data.round) || 0;
+                fastState.phase = data.phase || '';
+                fastState.current = Number(data.current) || 0;
+                fastState.total = Number(data.total) || 0;
+                fastState.currentIP = data.currentIp || '';
+                fastPending = false;
+                renderQuick();
+            }
+
+            function handleFastBatch(entry) {
+                if (!entry) return;
+                fastState.history.push(entry);
+                if (fastState.history.length > FAST_HISTORY_LIMIT) {
+                    fastState.history = fastState.history.slice(-FAST_HISTORY_LIMIT);
+                }
+                renderQuickHistory();
+                refreshQuickControls();
+            }
+
+            function handleFastResult(result) {
+                fastState.result = result || null;
+                renderQuickResult();
+                refreshQuickControls();
+            }
+
+            function handleFastFinished(data) {
+                fastState.running = false;
+                fastPending = false;
+                fastStopping = false;
+                const reason = (data && data.reason) || '快速优选已结束';
+                fastState.message = reason;
+                log('快速优选: ' + reason);
+                renderQuick();
+                refreshControls();
+            }
+
+            function clearQuickHistory() {
+                if (!fastState.history.length) return;
+                if (!isConnected || !ws || ws.readyState !== WebSocket.OPEN) {
+                    showToast('未连接到程序');
+                    return;
+                }
+                showConfirmModal(
+                    '删除历史记录',
+                    '确认删除全部历史优选 IP 记录吗？此操作无法撤销。',
+                    () => {
+                        if (!sendWS('clear_fast_history')) showToast('发送失败，请稍后重试');
+                    },
+                    '#ef4444'
+                );
+            }
+
+            function renderQuick() {
+                renderQuickProgress();
+                renderQuickResult();
+                renderQuickHistory();
+                refreshQuickControls();
+            }
+
+            function setQuickStatus(text, state) {
+                const status = $('qStatus');
+                if (!status) return;
+                status.textContent = text || '';
+                status.className = 'quick-status' + (state ? ' ' + state : '');
+            }
+
+            function renderQuickProgress() {
+                const box = $('qProgressBox');
+                const bar = $('qProgressBar');
+                if (!box || !bar) return;
+
+                const running = fastState.running || (taskRunning && taskKind === 'fast');
+                if (!running && !fastPending) {
+                    box.style.display = 'none';
+                    if (fastState.result) {
+                        setQuickStatus('快速优选完成', 'success');
+                    } else if (fastState.message) {
+                        const message = fastState.message;
+                        const state = /停止/.test(message)
+                            ? 'stopped'
+                            : (/失败|错误|无效|超时/.test(message) ? 'error' : '');
+                        setQuickStatus(message, state);
+                    } else {
+                        setQuickStatus('等待开始', '');
+                    }
+                    return;
+                }
+
+                box.style.display = 'block';
+                let text = '正在启动...';
+                let current = fastState.current;
+                let total = fastState.total;
+
+                if (fastState.phase === 'starting' || fastState.phase === 'init' || (!fastState.phase && running)) {
+                    text = '正在初始化...';
+                } else if (fastState.phase === 'rtt') {
+                    text = '第 ' + fastState.round + ' 轮 · RTT 测试 ' + current + '/' + total;
+                } else if (fastState.phase === 'speed') {
+                    text = '第 ' + fastState.round + ' 轮 · 测速 ' + current + '/' + total;
+                } else if (fastState.message) {
+                    text = fastState.message;
+                }
+
+                let percent = 0;
+                if (total > 0) {
+                    percent = Math.max(0, Math.min(100, Math.round((current / total) * 100)));
+                    bar.style.width = percent + '%';
+                    bar.textContent = percent + '%';
+                } else {
+                    bar.style.width = '0%';
+                    bar.textContent = '准备中';
+                }
+                setQuickStatus(
+                    text + (fastState.phase === 'speed' && fastState.currentIP ? ' · ' + fastState.currentIP : ''),
+                    'running'
+                );
+            }
+
+            function formatFastSpeed(speedKb) {
+                const kb = Number(speedKb) || 0;
+                return (kb / 128).toFixed(2) + ' Mbps (' + (kb / 1024).toFixed(2) + ' MB/s)';
+            }
+
+            function renderQuickResult() {
+                const box = $('qResultBox');
+                if (!box) return;
+                const result = fastState.result;
+                if (!result) {
+                    box.style.display = 'none';
+                    return;
+                }
+                box.style.display = 'block';
+                const ipEl = $('qResultIp');
+                if (ipEl) {
+                    ipEl.textContent = '';
+                    ipEl.appendChild(ipDisplayNode(result.ip || '—'));
+                    ipEl.title = '点击复制IP';
+                    ipEl.onclick = () => copyToClipboard(String(result.ip || ''));
+                }
+                const setText = (id, text) => {
+                    const node = $(id);
+                    if (node) node.textContent = text;
+                };
+                const dc = result.city
+                    ? result.city + (result.dataCenter ? ' · ' + result.dataCenter : '')
+                    : (result.dataCenter || '—');
+                setText('qResultDC', dc);
+                setText('qResultLatency', (result.latencyMs || 0) + ' ms');
+                setText('qResultSpeed', formatFastSpeed(result.speedKb));
+                setText('qResultTarget', (result.targetMbps || fastState.targetMbps) + ' Mbps');
+                setText('qResultElapsed', (result.elapsedSec || 0) + ' 秒');
+                setText('qResultRound', '第 ' + (result.round || 0) + ' 轮');
+            }
+
+            function formatHistoryTime(entry) {
+                const ts = Number(entry && entry.timestamp);
+                if (!Number.isFinite(ts) || ts <= 0) return '—';
+                const date = new Date(ts * 1000);
+                return (date.getMonth() + 1) + '/' + date.getDate() + ' '
+                    + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
+            }
+
+            let historyRenderKey = null;
+
+            // Android WebView 偶发沿用滚动层的旧栅格，新插入的行要触摸后才绘制。
+            // 先同步布局，再让表格跨帧进入合成层后退出，强制整表重新栅格化。
+            function forceHistoryTableRepaint(table) {
+                if (!table || !window.CFScanNative) return;
+                table.style.transform = 'translateZ(0)';
+                void table.offsetHeight;
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        table.style.transform = '';
+                    });
+                });
+            }
+
+            function renderQuickHistory() {
+                const tbody = document.querySelector('#qHistoryTable tbody');
+                if (!tbody) return;
+
+                // 进度消息会高频触发本函数，历史未变化时跳过整表重建，避免反复失效
+                const key = fastState.history.map((entry) => [
+                    entry.timestamp, entry.ip, entry.speedKb, entry.latencyMs
+                ].join(':')).join('|');
+                if (key === historyRenderKey) return;
+                historyRenderKey = key;
+
+                while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+
+                const entries = fastState.history.slice().reverse();
+                const frag = document.createDocumentFragment();
+                entries.forEach((entry) => {
+                    const tr = el('tr');
+
+                    const ipTd = el('td', 'test-ip-cell');
+                    const ipSpan = el('span', 'copy-ip');
+                    ipSpan.appendChild(ipDisplayNode(entry.ip || '—'));
+                    ipSpan.title = '点击复制IP';
+                    ipSpan.addEventListener('click', () => copyToClipboard(String(entry.ip || '')));
+                    ipTd.appendChild(ipSpan);
+                    tr.appendChild(ipTd);
+
+                    const dc = entry.city
+                        ? entry.city + (entry.dataCenter ? ' · ' + entry.dataCenter : '')
+                        : (entry.dataCenter || '—');
+                    tr.appendChild(el('td', 'dc-text-cell', dc));
+                    tr.appendChild(el('td', 'metric-cell', (entry.latencyMs || 0) + ' ms'));
+                    tr.appendChild(el('td', 'metric-cell', entry.speedKb > 0
+                        ? formatFastSpeed(entry.speedKb)
+                        : '—'));
+                    tr.appendChild(el('td', 'metric-cell', formatHistoryTime(entry)));
+                    frag.appendChild(tr);
+                });
+                tbody.appendChild(frag);
+                forceHistoryTableRepaint(tbody.parentNode);
+
+                updateBadge('qHistoryCount', fastState.history.length);
+                const empty = $('qHistoryEmpty');
+                if (empty) empty.classList.toggle('show', fastState.history.length === 0);
+            }
+
+            const ROUND_BTN_STATES = {
+                '▶': 'play',
+                '❚❚': 'pause',
+                '■': 'stop',
+                '…': 'pending',
+                '↺': 'reset'
+            };
+
+            function setRoundButton(btn, iconText, title, className, disabled) {
+                if (!btn) return;
+                btn.dataset.state = ROUND_BTN_STATES[iconText] || 'play';
+                btn.title = title;
+                btn.setAttribute('aria-label', title);
+                btn.className = className;
+                btn.disabled = !!disabled;
+            }
+
+            function refreshQuickControls() {
+                const connected = isConnected && ws && ws.readyState === WebSocket.OPEN;
+                const closed = shuttingDown || serverClosed;
+                const fastRunning = fastState.running || (taskRunning && taskKind === 'fast');
+                const otherTask = taskRunning && taskKind !== 'fast';
+                const pending = pendingStart || busyPending || fastPending;
+
+                const qStart = $('qStart');
+                if (qStart) {
+                    let iconText = '▶';
+                    let titleText = '开始快速优选';
+                    let className = 'round-btn primary';
+                    let disabled = !connected || closed || otherTask;
+
+                    if (fastRunning) {
+                        iconText = '■';
+                        titleText = fastStopping ? '正在停止快速优选' : '停止快速优选';
+                        className = 'round-btn danger';
+                        disabled = !connected || closed || fastStopping;
+                    } else if (fastPending || pending) {
+                        iconText = '…';
+                        titleText = '正在启动快速优选';
+                        disabled = true;
+                    }
+
+                    setRoundButton(qStart, iconText, titleText, className, disabled);
+                }
+
+                const locked = !connected || closed || taskRunning || pendingStart || busyPending || fastPending || fastRunning;
+                ['qIpType', 'qTargetMbps', 'qPort', 'qSpeedUrl', 'qDCFilterBtn'].forEach((id) => {
+                    const input = $(id);
+                    if (input) input.disabled = locked;
+                });
+                const clearHistory = $('qHistoryClear');
+                if (clearHistory) {
+                    clearHistory.disabled = !connected || closed || fastState.history.length === 0;
+                }
+            }
+
+            function startQuickScan() {
+                if (!isConnected) {
+                    log('未连接到程序，请稍后重试');
+                    return;
+                }
+                if (fastState.running || (taskRunning && taskKind === 'fast')) {
+                    stopQuickScan();
+                    return;
+                }
+                if (taskRunning || pendingStart || busyPending || fastPending) {
+                    log('当前有任务正在运行，请等待完成后再试');
+                    return;
+                }
+
+                const ipType = $('qIpType').value === '6' ? 6 : 4;
+                const targetInput = $('qTargetMbps');
+                const targetMbps = parseInt(targetInput.value, 10);
+                if (!Number.isFinite(targetMbps) || targetMbps < 1 || targetMbps > 10000) {
+                    log('目标带宽需在 1–10000 Mbps 之间');
+                    targetInput.focus();
+                    return;
+                }
+                const port = parseInt($('qPort').value, 10);
+                if (!Number.isFinite(port) || port < 1 || port > 65535) {
+                    log('端口无效');
+                    return;
+                }
+                const urlInput = $('qSpeedUrl');
+                const speedUrl = urlInput.value.trim();
+                if (!speedUrl) {
+                    log('请先填写测速 URL');
+                    urlInput.focus();
+                    return;
+                }
+
+                saveQuickSettings();
+                fastPending = true;
+                fastStopping = false;
+                // 新一轮开始先丢掉上次达标结果，历史记录继续保留
+                fastState.result = null;
+                fastState.round = 0;
+                fastState.current = 0;
+                fastState.total = 0;
+                fastState.currentIP = '';
+                fastState.phase = 'starting';
+                fastState.message = '正在启动...';
+                renderQuick();
+                if (!sendWS('start_fast_task', {
+                    ipType: ipType,
+                    port: port,
+                    speedUrl: speedUrl,
+                    targetMbps: targetMbps,
+                    dcFilter: dcFilter.slice(),
+                })) {
+                    fastPending = false;
+                    fastState.message = '启动失败';
+                    renderQuick();
+                }
+            }
+
+            function stopQuickScan() {
+                if (!fastState.running || fastStopping) return;
+                fastStopping = true;
+                refreshQuickControls();
+                if (!sendWS('stop_fast_task')) {
+                    fastStopping = false;
+                    refreshQuickControls();
+                }
+            }
+
+            function handleQuickStart() {
+                if (fastState.running || (taskRunning && taskKind === 'fast')) {
+                    stopQuickScan();
+                } else {
+                    startQuickScan();
+                }
+            }
+
+            // ----------------------- 数据中心筛选 -----------------------
+
+            function initDCFilterDraft() {
+                dcFilterDraft = new Set();
+                if (!dcOptionsLoaded) return;
+                const available = new Set(dcOptions.map((item) => item.code));
+                if (dcFilter.length === 0) {
+                    dcOptions.forEach((item) => dcFilterDraft.add(item.code));
+                } else {
+                    dcFilter.forEach((code) => {
+                        if (available.has(code)) dcFilterDraft.add(code);
+                    });
+                }
+            }
+
+            function dcSearchHaystack(item) {
+                return [
+                    item.code,
+                    item.city,
+                    item.region,
+                    item.cca2,
+                    countryLabel(item.cca2),
+                ].filter(Boolean).join(' ').toLowerCase();
+            }
+
+            function syncDCGroupUI(groupEl, group) {
+                const selected = selectedInList(group.items);
+                const groupCb = groupEl.querySelector('.dc-group-check');
+                if (groupCb) {
+                    groupCb.checked = selected === group.items.length;
+                    groupCb.indeterminate = selected > 0 && selected < group.items.length;
+                }
+                const groupSelected = groupEl.querySelector('.dc-group-selected');
+                if (groupSelected) {
+                    groupSelected.textContent = selected > 0 && selected < group.items.length ? '已选 ' + selected : '';
+                }
+
+                group.countries.forEach((items, cc) => {
+                    const key = cc || 'UNKNOWN';
+                    const row = Array.from(groupEl.querySelectorAll('.dc-country')).find((node) => node.dataset.country === key);
+                    if (!row) return;
+                    const count = selectedInList(items);
+                    const cb = row.querySelector('.dc-country-check');
+                    if (cb) {
+                        cb.checked = count === items.length;
+                        cb.indeterminate = count > 0 && count < items.length;
+                    }
+                    const countEl = row.querySelector('.dc-country-count');
+                    if (countEl) {
+                        countEl.textContent = count > 0 && count < items.length
+                            ? count + ' / ' + items.length + ' 个'
+                            : items.length + ' 个';
+                    }
+                    row.querySelectorAll('.dc-chip').forEach((chip) => {
+                        chip.classList.toggle('selected', dcFilterDraft.has(chip.dataset.code));
+                    });
+                });
+            }
+
+            function renderDCFilterList() {
+                const list = $('dcFilterList');
+                const hint = $('dcFilterHint');
+                if (!list) return;
+                while (list.firstChild) list.removeChild(list.firstChild);
+
+                if (!dcOptionsLoaded) {
+                    list.appendChild(el('div', 'empty-hint show', '正在加载数据中心列表...'));
+                    if (hint) hint.textContent = '';
+                    return;
+                }
+                if (dcOptions.length === 0) {
+                    list.appendChild(el('div', 'empty-hint show', '暂无数据中心数据，将扫描全部数据中心。'));
+                    if (hint) hint.textContent = '';
+                    return;
+                }
+
+                const search = ($('dcFilterSearch')?.value || '').trim().toLowerCase();
+                const groups = buildDCGroups();
+                const frag = document.createDocumentFragment();
+                let visibleGroups = 0;
+
+                groups.forEach((group) => {
+                    const groupLabelMatches = group.label.toLowerCase().includes(search);
+                    const visibleItems = group.items.filter((item) => {
+                        if (!search || groupLabelMatches) return true;
+                        return dcSearchHaystack(item).includes(search);
+                    });
+                    if (search && visibleItems.length === 0) return;
+                    visibleGroups++;
+
+                    const groupEl = el('div', 'dc-group');
+                    groupEl.dataset.group = group.key;
+
+                    const header = el('div', 'dc-group-header');
+                    const groupCb = document.createElement('input');
+                    groupCb.type = 'checkbox';
+                    groupCb.className = 'dc-group-check';
+                    const groupSelectedCount = selectedInList(group.items);
+                    groupCb.checked = groupSelectedCount === group.items.length;
+                    groupCb.indeterminate = groupSelectedCount > 0 && groupSelectedCount < group.items.length;
+                    groupCb.addEventListener('change', () => {
+                        if (groupCb.checked) {
+                            group.items.forEach((item) => dcFilterDraft.add(item.code));
+                        } else {
+                            group.items.forEach((item) => dcFilterDraft.delete(item.code));
+                        }
+                        syncDCGroupUI(groupEl, group);
+                        updateDCFilterCount();
+                    });
+
+                    const toggle = el('button', 'dc-group-toggle');
+                    toggle.type = 'button';
+                    const chevron = el('span', 'dc-chevron', dcExpandedGroups.has(group.key) ? '▾' : '▸');
+                    toggle.append(chevron, el('span', '', group.label));
+                    const total = el('span', 'dc-group-count', group.items.length + ' 个');
+                    toggle.appendChild(total);
+                    const selectedLabel = el('span', 'dc-group-selected', groupSelectedCount > 0 && groupSelectedCount < group.items.length ? '已选 ' + groupSelectedCount : '');
+                    toggle.appendChild(selectedLabel);
+
+                    const itemsEl = el('div', 'dc-group-items');
+                    itemsEl.style.display = dcExpandedGroups.has(group.key) ? 'block' : 'none';
+
+                    toggle.addEventListener('click', () => {
+                        if (dcExpandedGroups.has(group.key)) {
+                            dcExpandedGroups.delete(group.key);
+                        } else {
+                            dcExpandedGroups.add(group.key);
+                        }
+                        const expanded = dcExpandedGroups.has(group.key);
+                        itemsEl.style.display = expanded ? 'block' : 'none';
+                        chevron.textContent = expanded ? '▾' : '▸';
+                    });
+
+                    header.append(groupCb, toggle);
+                    groupEl.appendChild(header);
+
+                    group.countries.forEach((items, cc) => {
+                        const countryItems = search
+                            ? items.filter((item) => groupLabelMatches || dcSearchHaystack(item).includes(search))
+                            : items;
+                        if (search && countryItems.length === 0) return;
+
+                        const countryEl = el('div', 'dc-country');
+                        countryEl.dataset.country = cc || 'UNKNOWN';
+                        const countryHeader = el('div', 'dc-country-header');
+                        const countryCb = document.createElement('input');
+                        countryCb.type = 'checkbox';
+                        countryCb.className = 'dc-country-check';
+                        const selected = selectedInList(items);
+                        countryCb.checked = selected === items.length;
+                        countryCb.indeterminate = selected > 0 && selected < items.length;
+                        countryCb.addEventListener('change', () => {
+                            if (countryCb.checked) {
+                                items.forEach((item) => dcFilterDraft.add(item.code));
+                            } else {
+                                items.forEach((item) => dcFilterDraft.delete(item.code));
+                            }
+                            syncDCGroupUI(groupEl, group);
+                            updateDCFilterCount();
+                        });
+                        const countryName = el('span', '', countryLabel(cc));
+                        const countryCount = el('span', 'dc-country-count', selected > 0 && selected < items.length
+                            ? selected + ' / ' + items.length + ' 个'
+                            : items.length + ' 个');
+                        countryHeader.append(countryCb, countryName, countryCount);
+
+                        const chips = el('div', 'dc-chips');
+                        countryItems.forEach((item) => {
+                            const chip = el('span', 'dc-chip');
+                            chip.dataset.code = item.code;
+                            if (dcFilterDraft.has(item.code)) chip.classList.add('selected');
+                            chip.appendChild(el('code', '', item.code));
+                            chip.appendChild(document.createTextNode(item.city || ''));
+                            chip.title = [item.code, item.city, item.region, item.cca2].filter(Boolean).join(' · ');
+                            chips.appendChild(chip);
+                        });
+                        countryEl.append(countryHeader, chips);
+                        itemsEl.appendChild(countryEl);
+                    });
+
+                    groupEl.appendChild(itemsEl);
+                    frag.appendChild(groupEl);
+                });
+
+                if (visibleGroups === 0) {
+                    list.appendChild(el('div', 'empty-hint show', '没有匹配的大区、国家或数据中心'));
+                } else {
+                    list.appendChild(frag);
+                }
+                updateDCFilterCount();
+            }
+
+            function updateDCFilterCount() {
+                const count = $('dcFilterCount');
+                if (count) {
+                    const groups = dcOptionsLoaded ? buildDCGroups() : [];
+                    const fullGroups = groups.filter((group) => selectedInList(group.items) === group.items.length).length;
+                    count.textContent = dcOptionsLoaded
+                        ? dcFilterDraft.size + ' / ' + dcOptions.length + ' 已选 · ' + fullGroups + ' 个大区'
+                        : '';
+                }
+                const hint = $('dcFilterHint');
+                if (hint) hint.textContent = '';
+            }
+
+            function openDCFilter() {
+                if (taskRunning || fastState.running || fastPending) {
+                    log('任务运行中，无法修改数据中心筛选');
+                    return;
+                }
+                dcFilterModalOpen = true;
+                const modal = $('dcFilterModal');
+                const search = $('dcFilterSearch');
+                if (search) {
+                    search.value = '';
+                    search.disabled = false;
+                }
+                openModal(modal, search && !search.disabled ? search : $('dcFilterCancel'));
+                const hint = $('dcFilterHint');
+                if (hint) hint.textContent = '';
+                if (!dcOptionsLoaded) {
+                    renderDCFilterList();
+                    if (hint) hint.textContent = '正在加载数据中心列表...';
+                    sendWS('get_dc_options');
+                    return;
+                }
+                initDCFilterDraft();
+                dcExpandedGroups = new Set();
+                if (dcFilterDraft.size > 0 && dcFilterDraft.size < dcOptions.length) {
+                    buildDCGroups().forEach((group) => {
+                        const selected = selectedInList(group.items);
+                        if (selected > 0) dcExpandedGroups.add(group.key);
+                    });
+                }
+                renderDCFilterList();
+            }
+
+            function closeDCFilter() {
+                dcFilterModalOpen = false;
+                closeModal($('dcFilterModal'));
+                const hint = $('dcFilterHint');
+                if (hint) hint.textContent = '';
+            }
+
+            function applyDCFilter() {
+                if (!dcOptionsLoaded || dcOptions.length === 0) {
+                    dcFilter = [];
+                    saveDCFilter();
+                    updateDCFilterSummary();
+                    closeDCFilter();
+                    return;
+                }
+                if (dcFilterDraft.size === 0) {
+                    const hint = $('dcFilterHint');
+                    if (hint) hint.textContent = '至少选择一个数据中心或国家/地区，或点击“全选”。';
+                    return;
+                }
+                dcFilter = dcFilterDraft.size === dcOptions.length
+                    ? []
+                    : normalizeDCFilterClient(Array.from(dcFilterDraft));
+                saveDCFilter();
+                updateDCFilterSummary();
+                closeDCFilter();
+            }
+
+            // ----------------------- 连接管理 -----------------------
+
+            function connect() {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+                if (serverClosed) return;
+
+                const proto = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                let sock;
+                try {
+                    sock = new WebSocket(proto + window.location.host + '/ws');
+                } catch (err) {
+                    scheduleReconnect();
+                    return;
+                }
+                ws = sock;
+
+                sock.onopen = () => {
+                    if (sock !== ws) return;
+                    wsConnectCount++;
+                    reconnectDelay = 1000;
+                    setStatus('已连接服务器', true);
+                    log('已连接到服务器');
+                    refreshControls();
+                    if (wsConnectCount === 1) {
+                        // 首次打开：允许复用缓存，刷新页面时不必重复探测
+                        sendWS('check_ipv6', { force: false });
+                    } else {
+                        // 断线重连多半是换了网络，强制重新检测 IPv4 / IPv6
+                        triggerIPv6Recheck('连接恢复', false);
+                    }
+                };
+
+                sock.onclose = () => {
+                    if (sock !== ws) return;
+                    ws = null;
+                    isConnected = false;
+                    ipv6ManualCheck = false;
+                    applyIPv6Status({ state: 'unknown', text: 'IPv6 未知', detail: '未连接到程序，暂时无法检测 IPv6' });
+                    pendingStart = false;
+                    pausePending = false;
+                    busyPending = false;
+                    fastPending = false;
+                    fastStopping = false;
+                    scanStopping = false;
+                    scanPhase = '';
+                    resetAutoSpeedState();
+                    clearAllSpeedTimers();
+                    speedInFlight.clear();
+                    if (testData.length > 0) renderAllTestResults();
+
+                    if (serverClosed) {
+                        refreshControls();
+                        return;
+                    }
+                    setStatus('连接断开，正在重连...', false);
+                    log('连接断开，正在重连...');
+                    refreshControls();
+                    scheduleReconnect();
+                };
+
+                sock.onmessage = (event) => {
+                    let msg;
+                    try {
+                        msg = JSON.parse(event.data);
+                    } catch (err) {
+                        return;
+                    }
+                    handleMessage(msg);
+                };
+
+                sock.onerror = () => {};
+            }
+
+            function scheduleReconnect() {
+                if (serverClosed) return;
+                clearTimeout(reconnectTimer);
+                reconnectTimer = setTimeout(connect, reconnectDelay);
+                reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX);
+            }
+
+            function sendWS(type, data) {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    log('未连接到程序，操作没有发出，请稍后重试');
+                    return false;
+                }
+                try {
+                    ws.send(JSON.stringify({ type: type, data: data || {} }));
+                    return true;
+                } catch (err) {
+                    log('指令发送失败: ' + err);
+                    return false;
+                }
+            }
+
+            // ----------------------- 消息分发 -----------------------
+
+            function handleMessage(msg) {
+                if (!msg || typeof msg.type !== 'string') return;
+                const data = msg.data;
+
+                switch (msg.type) {
+                    case 'ipv6_status': {
+                        applyIPv6Status(data || {}, true);
+                        if (ipv6ManualCheck && data && data.state && data.state !== 'checking') {
+                            ipv6ManualCheck = false;
+                            const IPV6_DONE_LABEL = { ok: '可用', no: '不可用', unknown: '未连通' };
+                            showToast('IPv6 检测完成：' + (IPV6_DONE_LABEL[data.state] || '未知'));
+                        }
+                        break;
+                    }
+                    case 'state_sync':
+                        applyStateSync(data || {});
+                        break;
+                    case 'log':
+                        log(data);
+                        break;
+                    case 'notice': {
+                        const hadFastPending = fastPending;
+                        scanStopping = false;
+                        clearPending();
+                        if (hadFastPending) {
+                            fastState.running = false;
+                            fastState.message = data || '操作未执行';
+                            renderQuick();
+                        }
+                        log(data || '操作未执行');
+                        refreshControls();
+                        break;
+                    }
+                    case 'scan_state':
+                        applyScanState(data || {});
+                        break;
+                    case 'scan_progress': {
+                        const phase = data && typeof data.phase === 'string' ? data.phase : '';
+                        const total = Number(data && data.total) || 0;
+                        if (total > 0) {
+                            scanProgressCurrent = Number(data && data.current) || 0;
+                            scanProgressTotal = total;
+                            if (typeof data.matched === 'number') scanMatched = data.matched;
+                            scanPhase = '';
+                        } else if (phase) {
+                            scanPhase = phase;
+                        }
+                        if (taskKind === 'scan') {
+                            if (scanPhase) {
+                                updateProgress(0, 0, scanPhase);
+                            } else {
+                                updateProgress(
+                                    scanProgressCurrent,
+                                    scanProgressTotal,
+                                    scanPaused ? '扫描已暂停' : '扫描中',
+                                    scanMatched > 0 ? '命中 ' + scanMatched : ''
+                                );
+                            }
+                        }
+                        break;
+                    }
+                    case 'scan_result':
+                        if (data) addScanResult(data);
+                        break;
+                    case 'scan_summary':
+                        applyScanSummary(data || {});
+                        break;
+                    case 'scan_finished':
+                        applyScanFinished(data || {});
+                        break;
+                    case 'fast_progress':
+                        handleFastProgress(data || {});
+                        break;
+                    case 'fast_batch':
+                        handleFastBatch(data || {});
+                        break;
+                    case 'fast_result':
+                        handleFastResult(data || {});
+                        break;
+                    case 'fast_finished':
+                        handleFastFinished(data || {});
+                        break;
+                    case 'fast_history_cleared':
+                        fastState.history = [];
+                        renderQuickHistory();
+                        refreshQuickControls();
+                        showToast('历史记录已删除');
+                        break;
+                    case 'dc_options':
+                        dcOptions = Array.isArray(data) ? data : [];
+                        dcOptionsLoaded = true;
+                        if (dcFilterModalOpen) {
+                            initDCFilterDraft();
+                            dcExpandedGroups = new Set();
+                            if (dcFilterDraft.size > 0 && dcFilterDraft.size < dcOptions.length) {
+                                buildDCGroups().forEach((group) => {
+                                    if (selectedInList(group.items) > 0) dcExpandedGroups.add(group.key);
+                                });
+                            }
+                            renderDCFilterList();
+                        }
+                        updateDCFilterSummary();
+                        break;
+                    case 'speed_test_result':
+                        updateSpeedResult(data || {});
+                        break;
+                    case 'reset_progress': {
+                        if (!data || typeof data.text !== 'string') break;
+                        if (!busyPending && !(taskRunning && taskKind === 'reset')) break;
+                        showProgress();
+                        updateProgress(
+                            Number(data.current) || 0,
+                            Number(data.total) || 0,
+                            data.text
+                        );
+                        break;
+                    }
+                    case 'reset_resources_done': {
+                        const payload = data || {};
+                        const deleted = Array.isArray(payload.deleted) ? payload.deleted : [];
+                        const fallback = Array.isArray(payload.fallback) ? payload.fallback : [];
+                        const failed = Array.isArray(payload.failed) ? payload.failed : [];
+                        const summary = typeof payload.message === 'string' && payload.message
+                            ? payload.message
+                            : '资源已重置';
+
+                        finishBusyTask(summary);
+                        const bar = $('progressBar');
+                        if (failed.length > 0) {
+                            if (bar) {
+                                bar.style.background = '#ef4444';
+                                bar.style.width = '100%';
+                                bar.textContent = '资源重置未完成';
+                            }
+                            showToast('资源重置未完成');
+                        } else if (fallback.length > 0) {
+                            setProgressState('warning');
+                            showToast('部分资源使用内置备份');
+                        }
+                        if (deleted.length > 0) log('已删除旧资源: ' + deleted.join('、'));
+                        if (fallback.length > 0) log('下载失败，已使用内置备份: ' + fallback.join('、'));
+                        if (failed.length > 0) log('资源处理失败: ' + failed.join('、'));
+                        break;
+                    }
+                    case 'error':
+                        applyError(data);
+                        break;
+                    case 'shutting_down':
+                        serverClosed = true;
+                        setStatus('程序已关闭，可以关掉此页面', false);
+                        log('服务器已关闭：' + ((data && data.reason) || '程序退出'));
+                        refreshControls();
+                        break;
+                }
+            }
+
+            function clearPending() {
+                pendingStart = false;
+                pausePending = false;
+                busyPending = false;
+                fastPending = false;
+            }
+
+            // ----------------------- 状态同步 -----------------------
+
+            function applyStateSync(data) {
+                taskRunning = !!data.taskRunning;
+                taskKind = data.taskKind || '';
+                scanPaused = !!data.scanPaused;
+                scanProgressCurrent = Number(data.scanCurrent) || 0;
+                scanProgressTotal = Number(data.scanTotal) || 0;
+                scanPhase = typeof data.scanPhase === 'string' ? data.scanPhase : '';
+                if (scanProgressTotal > 0) scanPhase = '';
+                if (!taskRunning || taskKind !== 'scan') scanStopping = false;
+                clearPending();
+
+                const results = Array.isArray(data.scanResults) ? data.scanResults : [];
+                const freshScan = taskRunning && taskKind === 'scan' && !scanPaused && results.length === 0;
+                if (freshScan) {
+                    // 新一轮扫描开始：服务端已清空结果，本页也要丢掉上一轮的测速状态
+                    scanStopping = false;
+                    resetAutoSpeedState();
+                    clearAllSpeedTimers();
+                    speedInFlight.clear();
+                    speedResults.clear();
+                    selectedDC = '';
+                    testData = [];
+                    renderAllTestResults();
+                }
+
+                setScanData(results);
+                scanMatched = results.length;
+
+                dcList = Array.isArray(data.dcList) ? data.dcList : [];
+                if (!freshScan) {
+                    syncSelectedDCView();
+                }
+                renderDCTable();
+                showDCSection(false);
+
+                if (taskRunning && taskKind === 'scan') {
+                    showProgress();
+                    if (scanPhase && scanProgressTotal <= 0) {
+                        updateProgress(0, 0, scanPhase);
+                    } else {
+                        updateProgress(
+                            scanProgressCurrent,
+                            scanProgressTotal,
+                            scanPaused ? '扫描已暂停' : '扫描中',
+                            scanMatched > 0 ? '命中 ' + scanMatched : ''
+                        );
+                    }
+                } else if (taskRunning && taskKind !== 'fast') {
+                    showProgress();
+                    updateProgress(0, 0, '正在重置资源');
+                } else if (scanData.length > 0) {
+                    showProgress();
+                    const bar = $('progressBar');
+                    if (bar) {
+                        resetProgressStyle();
+                        bar.style.width = '100%';
+                        bar.textContent = scanPaused
+                            ? '扫描已暂停，可继续扫描或直接测速'
+                            : '扫描完成，请选择数据中心';
+                        setProgressState(scanPaused ? 'warning' : 'done');
+                    }
+                } else {
+                    hideProgress();
+                }
+
+                updateTestingUI();
+                applyFastSnapshot(data.fast || {});
+                refreshControls();
+            }
+
+            function applyScanState(data) {
+                taskRunning = !!data.running;
+                if (taskRunning) {
+                    taskKind = 'scan';
+                } else if (taskKind === 'scan') {
+                    taskKind = '';
+                }
+                scanPaused = !!data.paused;
+                pausePending = false;
+                if (!taskRunning) scanStopping = false;
+                if (scanPaused) showDCSection(false);
+                if (taskRunning && taskKind === 'scan') {
+                    // 暂停/继续/取消后立即刷新文案，不等下一条 scan_progress
+                    if (scanPhase) {
+                        updateProgress(0, 0, scanPhase);
+                    } else {
+                        updateProgress(
+                            scanProgressCurrent,
+                            scanProgressTotal,
+                            scanPaused ? '扫描已暂停' : '扫描中',
+                            scanMatched > 0 ? '命中 ' + scanMatched : ''
+                        );
+                    }
+                }
+                refreshControls();
+            }
+
+            function applyScanSummary(data) {
+                if (Array.isArray(data.results)) setScanData(data.results);
+                scanMatched = scanData.length;
+                dcList = Array.isArray(data.dcList) ? data.dcList : [];
+                syncSelectedDCView();
+                renderDCTable();
+                showDCSection(dcList.length > 0);
+
+                showProgress();
+                const bar = $('progressBar');
+                if (bar) {
+                    resetProgressStyle();
+                    bar.style.width = '100%';
+                    bar.textContent = '扫描已暂停，已发现 ' + scanData.length + ' 个有效 IP';
+                    setProgressState('warning');
+                }
+                refreshControls();
+            }
+
+            function applyScanFinished(data) {
+                taskRunning = false;
+                taskKind = '';
+                scanPaused = false;
+                pausePending = false;
+                scanStopping = false;
+                scanPhase = '';
+
+                if (Array.isArray(data.results)) setScanData(data.results);
+                scanMatched = scanData.length;
+                dcList = Array.isArray(data.dcList) ? data.dcList : [];
+                syncSelectedDCView();
+                renderDCTable();
+                showDCSection(dcList.length > 0);
+
+                showProgress();
+                const bar = $('progressBar');
+                if (bar) {
+                    resetProgressStyle();
+                    bar.style.width = '100%';
+                    if (data.canceled) {
+                        bar.textContent = scanData.length > 0
+                            ? '扫描已取消，共 ' + scanData.length + ' 个有效 IP，请选择数据中心'
+                            : '扫描已取消';
+                        setProgressState('warning');
+                    } else {
+                        bar.textContent = '扫描完成，共 ' + scanData.length + ' 个有效 IP，请选择数据中心';
+                        setProgressState('done');
+                    }
+                }
+                refreshControls();
+            }
+
+            function rowsForDC(dc) {
+                const rows = [];
+                for (const res of scanData) {
+                    if (!res || res.DataCenter !== dc) continue;
+                    const ip = String(res.IP || '');
+                    if (!ip) continue;
+                    rows.push({ IP: ip, LatencyMs: latencyValue(res) });
+                }
+                rows.sort((a, b) => a.LatencyMs - b.LatencyMs);
+                return rows;
+            }
+
+            function syncSelectedDCView() {
+                if (!selectedDC) return;
+                const rows = rowsForDC(selectedDC);
+                if (rows.length === 0) {
+                    selectedDC = '';
+                    testData = [];
+                    cancelAutoSpeed('');
+                    renderAllTestResults();
+                    return;
+                }
+                testData = rows;
+                renderAllTestResults();
+            }
+
+            function applyError(data) {
+                const text = typeof data === 'string' ? data : JSON.stringify(data);
+                log('错误: ' + text);
+
+                const wasFast = taskKind === 'fast' || fastState.running;
+                taskRunning = false;
+                taskKind = '';
+                scanPaused = false;
+                scanStopping = false;
+                scanPhase = '';
+                clearPending();
+
+                if (wasFast) {
+                    fastState.running = false;
+                    fastStopping = false;
+                    fastState.message = '快速优选失败';
+                    renderQuick();
+                }
+
+                if (!wasFast) {
+                    showProgress();
+                    const bar = $('progressBar');
+                    if (bar) {
+                        resetProgressStyle();
+                        bar.style.background = '#ef4444';
+                        bar.style.width = '100%';
+                        bar.textContent = '任务失败';
+                    }
+                }
+                refreshControls();
+            }
+
+            function finishBusyTask(text) {
+                taskRunning = false;
+                taskKind = '';
+                scanPaused = false;
+                scanStopping = false;
+                scanPhase = '';
+                clearPending();
+
+                showProgress();
+                const bar = $('progressBar');
+                if (bar) {
+                    resetProgressStyle();
+                    bar.style.width = '100%';
+                    bar.textContent = text;
+                }
+                refreshControls();
+            }
+
+            // ----------------------- 渲染 -----------------------
+
+            function updateTableEmptyStates() {
+                const scanEmpty = $('scanEmpty');
+                if (scanEmpty) scanEmpty.classList.toggle('show', scanData.length === 0);
+                const testEmpty = $('testEmpty');
+                if (testEmpty) testEmpty.classList.toggle('show', testData.length === 0);
+            }
+
+            function setScanData(results) {
+                scanData = results.slice();
+                updateBadge('scanCount', scanData.length);
+                renderAllScanRows();
+                capNoticeCount = -1;
+            }
+
+            function renderAllScanRows() {
+                const tbody = document.querySelector('#scanTable tbody');
+                if (!tbody) return;
+
+                clearTable(tbody);
+                // 与实时追加保持一致：最新的在最上面，只保留最近 MAX_SCAN_ROWS 条
+                const start = Math.max(0, scanData.length - MAX_SCAN_ROWS);
+                const recent = scanData.slice(start).reverse();
+                const frag = document.createDocumentFragment();
+                recent.forEach((res) => frag.appendChild(buildScanRow(res)));
+                tbody.appendChild(frag);
+                updateTableEmptyStates();
+
+                if (scanData.length > MAX_SCAN_ROWS && capNoticeCount !== scanData.length) {
+                    capNoticeCount = scanData.length;
+                    log('扫描结果共 ' + scanData.length + ' 条，表格仅显示最近 ' + MAX_SCAN_ROWS + ' 条');
+                }
+            }
+
+            function addScanResult(res) {
+                scanData.push(res);
+                updateBadge('scanCount', scanData.length);
+                updateTableEmptyStates();
+
+                const tbody = document.querySelector('#scanTable tbody');
+                if (!tbody) return;
+                tbody.insertBefore(buildScanRow(res), tbody.firstElementChild);
+                while (tbody.children.length > MAX_SCAN_ROWS) {
+                    tbody.removeChild(tbody.lastElementChild);
+                }
+            }
+
+            // IPv6 在窄屏需要换行时，只在冒号后断开：用 <wbr> 提供断行点，
+            // 不往文本里塞零宽字符，选中复制拿到的仍是完整地址。
+            function ipDisplayNode(ip) {
+                const text = String(ip == null ? '' : ip);
+                const parts = text.split(':');
+                const frag = document.createDocumentFragment();
+                parts.forEach((part, i) => {
+                    if (i > 0) frag.appendChild(document.createElement('wbr'));
+                    frag.appendChild(document.createTextNode(i < parts.length - 1 ? part + ':' : part));
+                });
+                return frag;
+            }
+
+            function buildScanRow(res) {
+                const tr = el('tr');
+
+                const ipTd = el('td', 'scan-ip-cell');
+                const ipSpan = el('span', 'copy-ip');
+                ipSpan.appendChild(ipDisplayNode(res.IP));
+                ipSpan.title = '点击复制IP';
+                ipSpan.addEventListener('click', () => copyToClipboard(String(res.IP)));
+                ipTd.appendChild(ipSpan);
+
+                const dcTd = el('td', 'dc-text-cell', res.DataCenter);
+                const regionTd = el('td', 'dc-text-cell', res.Region || '');
+                const cityTd = el('td', 'dc-text-cell', res.City || '');
+                const latencyTd = el('td', 'metric-cell');
+                const latencySpan = el('span', '', res.LatencyStr);
+                latencySpan.style.color = getLatencyColor(res.LatencyStr);
+                latencyTd.appendChild(latencySpan);
+
+                tr.append(ipTd, dcTd, regionTd, cityTd, latencyTd);
+                return tr;
+            }
+
+            function latencyValue(res) {
+                if (!res) return Number.MAX_SAFE_INTEGER;
+                if (typeof res.LatencyStr === 'number') return res.LatencyStr;
+                const value = parseFloat(res.LatencyStr);
+                return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
+            }
+
+            function renderDCTable() {
+                const tbody = document.querySelector('#dcTable tbody');
+                if (!tbody) return;
+
+                clearTable(tbody);
+                const frag = document.createDocumentFragment();
+
+                dcList.forEach((dc) => {
+                    const tr = el('tr');
+
+                    const nameTd = el('td');
+                    nameTd.appendChild(el('strong', '', dc.DataCenter));
+
+                    const regionTd = el('td', '', dc.Region || '');
+                    const cityTd = el('td', '', dc.City || '');
+                    const countTd = el('td', '', dc.IPCount);
+                    const latencyTd = el('td', '', (dc.MinLatency === undefined ? '-' : dc.MinLatency + ' ms'));
+
+                    const actionTd = el('td');
+                    const btn = el('button', 'action-btn');
+                    btn.type = 'button';
+
+                    const current = selectedDC === dc.DataCenter;
+                    btn.textContent = current ? '查看中' : '查看 IP';
+                    if (current) btn.classList.add('selected');
+                    btn.addEventListener('click', () => selectDC(dc.DataCenter));
+                    actionTd.appendChild(btn);
+
+                    tr.append(nameTd, regionTd, cityTd, countTd, latencyTd, actionTd);
+                    frag.appendChild(tr);
+                });
+
+                tbody.appendChild(frag);
+                updateBadge('dcCount', dcList.length);
+            }
+
+            function showDCSection(scrollIntoView) {
+                const section = $('dcSection');
+                if (!section) return;
+                section.style.display = dcList.length > 0 ? 'block' : 'none';
+                if (scrollIntoView && dcList.length > 0) {
+                    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+
+            function renderAllTestResults() {
+                const tbody = document.querySelector('#testTable tbody');
+                if (!tbody) return;
+
+                clearTable(tbody);
+                speedCells.clear();
+
+                const frag = document.createDocumentFragment();
+                testData.forEach((res) => frag.appendChild(buildTestRow(res)));
+                tbody.appendChild(frag);
+
+                updateBadge('testCount', testData.length);
+                updateTestingUI();
+                updateTableEmptyStates();
+                refreshControls();
+            }
+
+            function buildTestRow(res) {
+                const tr = el('tr');
+
+                const ipTd = el('td', 'test-ip-cell');
+                const ipSpan = el('span', 'copy-ip');
+                ipSpan.appendChild(ipDisplayNode(res.IP));
+                ipSpan.title = '点击复制IP';
+                ipSpan.addEventListener('click', () => copyToClipboard(String(res.IP)));
+                ipTd.appendChild(ipSpan);
+
+                const latencyTd = el('td', 'metric-cell');
+                const hasLatency = res.LatencyMs !== Number.MAX_SAFE_INTEGER;
+                const latencySpan = el('span', '', hasLatency ? Math.round(res.LatencyMs) + ' ms' : '—');
+                if (hasLatency) latencySpan.style.color = getLatencyColor(res.LatencyMs);
+                latencyTd.appendChild(latencySpan);
+
+                const speedBtnTd = el('td', 'metric-cell');
+                const btn = el('button', 'action-btn', speedResults.has(res.IP) ? '重测' : '测速');
+                btn.type = 'button';
+                btn.addEventListener('click', () => runSpeedTest(res.IP));
+                if (speedInFlight.has(res.IP)) {
+                    btn.disabled = true;
+                    btn.classList.add('loading');
+                    btn.textContent = '测速中';
+                }
+                speedBtnTd.appendChild(btn);
+
+                const saved = speedResults.get(res.IP) || '';
+                const resultTd = el('td', 'speed-result-cell');
+                const resultSpan = el('strong', 'speed-result', saved || '—');
+                resultSpan.style.color = getSpeedResultColor(saved);
+                resultTd.appendChild(resultSpan);
+
+                speedCells.set(res.IP, { btn: btn, result: resultSpan });
+
+                tr.append(ipTd, latencyTd, speedBtnTd, resultTd);
+                return tr;
+            }
+
+            function updateTestingUI() {
+                const statusSpan = $('currentTestDC');
+                if (statusSpan) {
+                    if (selectedDC) {
+                        statusSpan.textContent = selectedDC;
+                        statusSpan.className = 'test-status done';
+                        statusSpan.style.display = 'inline-block';
+                    } else {
+                        statusSpan.style.display = 'none';
+                    }
+                }
+
+                const testTitle = $('testSectionTitle');
+                if (testTitle) {
+                    testTitle.textContent = selectedDC ? selectedDC + ' 数据中心' : '详细测试结果';
+                }
+            }
+
+            // ----------------------- 用户操作 -----------------------
+
+            function stopScanTask() {
+                if (!isConnected) {
+                    log('未连接到程序，请稍后重试');
+                    return;
+                }
+                if (!taskRunning || taskKind !== 'scan' || scanStopping) return;
+                scanStopping = true;
+                refreshControls();
+                if (!sendWS('stop_scan_task')) {
+                    scanStopping = false;
+                    refreshControls();
+                    return;
+                }
+                log('已请求取消扫描');
+            }
+
+            function handlePrimaryAction() {
+                if (!isConnected) {
+                    log('未连接到程序，请稍后重试');
+                    return;
+                }
+                if (pendingStart || pausePending || busyPending || scanStopping) return;
+
+                if (taskRunning && taskKind === 'scan') {
+                    if (scanPaused) {
+                        pausePending = true;
+                        refreshControls();
+                        if (!sendWS('resume_task')) {
+                            pausePending = false;
+                            refreshControls();
+                            return;
+                        }
+                        log('已请求继续扫描');
+                    } else {
+                        pausePending = true;
+                        refreshControls();
+                        if (!sendWS('pause_task')) {
+                            pausePending = false;
+                            refreshControls();
+                            return;
+                        }
+                        log('已请求暂停扫描');
+                    }
+                    return;
+                }
+
+                if (taskRunning) {
+                    log('当前有任务正在运行，请等待完成');
+                    return;
+                }
+                startUnifiedTask();
+            }
+
+            function startUnifiedTask() {
+                const ipTypeInput = $('ipType');
+                const ipType = parseInt(ipTypeInput.value, 10) === 6 ? 6 : 4;
+
+                const threadsInput = $('scanThreads');
+                let threads = parseInt(threadsInput.value, 10);
+                if (!Number.isFinite(threads) || threads <= 0) threads = 100;
+                threads = Math.min(MAX_THREADS, Math.max(1, threads));
+                threadsInput.value = String(threads);
+
+                const port = parseInt($('testPort').value, 10);
+                if (!Number.isFinite(port) || port < 1 || port > 65535) {
+                    log('端口无效');
+                    return;
+                }
+
+                const speedUrlInput = $('speedUrl');
+                const speedUrl = speedUrlInput.value.trim();
+                if (!speedUrl) {
+                    log('请先填写测速 URL 再开始扫描');
+                    speedUrlInput.focus();
+                    return;
+                }
+                saveSpeedUrl(speedUrl);
+
+                pendingStart = true;
+                refreshControls();
+                if (!sendWS('start_task', {
+                    ipType: ipType,
+                    threads: threads,
+                    port: port,
+                    speedUrl: speedUrl
+                })) {
+                    pendingStart = false;
+                    refreshControls();
+                    return;
+                }
+
+                resetLocalScanView();
+                switchTab('scan');
+                showProgress();
+                resetProgressStyle();
+                updateProgress(0, 0, '准备中');
+            }
+
+            function resetLocalScanView() {
+                resetAutoSpeedState();
+                clearAllSpeedTimers();
+                scanData = [];
+                testData = [];
+                dcList = [];
+                scanProgressCurrent = 0;
+                scanProgressTotal = 0;
+                scanMatched = 0;
+                scanPhase = '';
+                scanStopping = false;
+                selectedDC = '';
+                capNoticeCount = -1;
+                speedCells.clear();
+                speedResults.clear();
+                speedInFlight.clear();
+
+                clearTable(document.querySelector('#scanTable tbody'));
+                clearTable(document.querySelector('#testTable tbody'));
+                clearTable(document.querySelector('#dcTable tbody'));
+                showDCSection(false);
+
+                updateBadge('scanCount', 0);
+                updateBadge('testCount', 0);
+                updateBadge('dcCount', 0);
+                updateTestingUI();
+                updateTableEmptyStates();
+                refreshControls();
+            }
+
+            function selectDC(dc) {
+                if (!dc) return;
+                if (taskRunning && taskKind === 'scan' && !scanPaused) {
+                    log('扫描进行中，请先暂停扫描或等待扫描完成后再查看');
+                    return;
+                }
+                if (taskRunning && taskKind !== 'scan') {
+                    log('有其他任务正在运行，请等待完成后再试');
+                    return;
+                }
+
+                cancelAutoSpeed('');
+                selectedDC = dc;
+                testData = rowsForDC(dc);
+                switchTab('test');
+                renderDCTable();
+                renderAllTestResults();
+                if (testData.length === 0) {
+                    log('数据中心 ' + dc + ' 暂无可测试的 IP');
+                }
+                refreshControls();
+            }
+
+            function clearSpeedTimer(ip) {
+                const timer = speedTimers.get(ip);
+                if (timer) {
+                    clearTimeout(timer);
+                    speedTimers.delete(ip);
+                }
+            }
+
+            function clearAllSpeedTimers() {
+                speedTimers.forEach((timer) => clearTimeout(timer));
+                speedTimers.clear();
+            }
+
+            function runSpeedTest(ip) {
+                if (!isConnected) {
+                    log('未连接到程序，无法测速');
+                    return false;
+                }
+                if (taskRunning && taskKind === 'scan' && !scanPaused) {
+                    log('扫描进行中，请先暂停扫描或等待扫描完成后再测速');
+                    return false;
+                }
+                if (speedInFlight.has(ip)) {
+                    log('该 IP 正在测速中');
+                    return false;
+                }
+
+                const port = parseInt($('testPort').value, 10);
+                if (!Number.isFinite(port) || port < 1 || port > 65535) {
+                    log('端口无效');
+                    return false;
+                }
+                const speedUrlInput = $('speedUrl');
+                const speedUrl = speedUrlInput ? speedUrlInput.value.trim() : '';
+                if (!speedUrl) {
+                    log('请先填写测速 URL');
+                    if (speedUrlInput) speedUrlInput.focus();
+                    return false;
+                }
+                saveSpeedUrl(speedUrl);
+
+                speedInFlight.add(ip);
+                const entry = speedCells.get(ip);
+                if (entry) {
+                    entry.btn.disabled = true;
+                    entry.btn.classList.add('loading');
+                    entry.btn.textContent = '测速中';
+                }
+                refreshControls();
+
+                if (!sendWS('start_speed_test', { ip: ip, port: port, speedUrl: speedUrl })) {
+                    speedInFlight.delete(ip);
+                    clearSpeedTimer(ip);
+                    if (entry) {
+                        entry.btn.classList.remove('loading');
+                        entry.btn.textContent = speedResults.has(ip) ? '重测' : '测速';
+                    }
+                    refreshControls();
+                    return false;
+                }
+
+                clearSpeedTimer(ip);
+                speedTimers.set(ip, setTimeout(() => {
+                    speedTimers.delete(ip);
+                    if (!speedInFlight.has(ip)) return;
+                    speedInFlight.delete(ip);
+                    speedResults.set(ip, '超时');
+                    updateSpeedCell(ip, '超时');
+                    log('IP ' + ip + ' 测速超时');
+                    advanceAutoSpeed(ip);
+                    refreshControls();
+                }, AUTO_STEP_TIMEOUT));
+                return true;
+            }
+
+            function updateSpeedCell(ip, text) {
+                const entry = speedCells.get(ip);
+                if (!entry) return;
+                entry.btn.classList.remove('loading');
+                entry.btn.textContent = speedResults.has(ip) ? '重测' : '测速';
+                entry.result.textContent = text;
+                entry.result.style.color = getSpeedResultColor(text);
+            }
+
+            function updateSpeedResult(data) {
+                const ip = data.ip;
+                if (!ip) return;
+                const text = String(data.speed || '未知');
+                clearSpeedTimer(ip);
+                speedInFlight.delete(ip);
+                speedResults.set(ip, text);
+                if (speedCells.has(ip)) {
+                    updateSpeedCell(ip, text);
+                } else {
+                    log('IP ' + ip + ' 测速结果: ' + text);
+                }
+                advanceAutoSpeed(ip);
+                refreshControls();
+            }
+
+            function resetAutoSpeedState() {
+                if (autoAdvanceTimer) {
+                    clearTimeout(autoAdvanceTimer);
+                    autoAdvanceTimer = null;
+                }
+                autoSpeed.active = false;
+                autoSpeed.queue = [];
+                autoSpeed.index = 0;
+                autoSpeed.currentIP = '';
+            }
+
+            function cancelAutoSpeed(reason) {
+                if (!autoSpeed.active) return;
+                resetAutoSpeedState();
+                if (reason) log(reason);
+                showToast('一键测速已停止');
+                refreshControls();
+            }
+
+            function finishAutoSpeed() {
+                resetAutoSpeedState();
+                log('一键测速完成');
+                showToast('一键测速已完成');
+                refreshControls();
+            }
+
+            function handleAutoSpeedClick() {
+                if (autoSpeed.active) {
+                    cancelAutoSpeed('已停止一键测速');
+                    return;
+                }
+                if (!isConnected) {
+                    log('未连接到程序，无法测速');
+                    return;
+                }
+                if (taskRunning && taskKind === 'scan' && !scanPaused) {
+                    log('扫描进行中，请先暂停扫描或等待扫描完成后再测速');
+                    return;
+                }
+                if (testData.length === 0) {
+                    log('当前没有可测速的 IP');
+                    return;
+                }
+                if (speedInFlight.size > 0) {
+                    log('已有测速任务进行中，请稍后再试');
+                    return;
+                }
+
+                const ips = [];
+                for (const row of testData) {
+                    if (!ips.includes(row.IP)) ips.push(row.IP);
+                    if (ips.length >= AUTO_SPEED_COUNT) break;
+                }
+                if (ips.length === 0) return;
+
+                autoSpeed.active = true;
+                autoSpeed.queue = ips;
+                autoSpeed.index = -1;
+                autoSpeed.currentIP = '';
+                log('开始一键测速（延迟最低的 ' + ips.length + ' 个，逐个进行）：' + ips.join('、'));
+                showToast('一键测速已开始');
+                startNextAutoStep();
+            }
+
+            function startNextAutoStep() {
+                if (!autoSpeed.active) return;
+                autoSpeed.index++;
+                if (autoSpeed.index >= autoSpeed.queue.length) {
+                    finishAutoSpeed();
+                    return;
+                }
+                const ip = autoSpeed.queue[autoSpeed.index];
+                autoSpeed.currentIP = ip;
+                refreshControls();
+                if (!runSpeedTest(ip)) {
+                    cancelAutoSpeed('一键测速已停止：测速指令发送失败');
+                }
+            }
+
+            function advanceAutoSpeed(ip) {
+                if (!autoSpeed.active || autoSpeed.currentIP !== ip) return;
+                autoSpeed.currentIP = '';
+                if (autoAdvanceTimer) clearTimeout(autoAdvanceTimer);
+                autoAdvanceTimer = setTimeout(() => {
+                    autoAdvanceTimer = null;
+                    startNextAutoStep();
+                }, 250);
+            }
+
+            function restoreDefaults() {
+                if (!canStartSideTask()) return;
+                showConfirmModal(
+                    '恢复默认设置',
+                    '确认恢复默认测速 URL，并重新下载 locations.json、ips-v4.txt、ips-v6.txt 吗？下载失败会自动重试，仍失败则使用内置备份。',
+                    () => {
+                        const def = 'speed.cloudflare.com/__down?bytes=10000000';
+                        const input = $('speedUrl');
+                        if (input) input.value = def;
+                        const qUrl = $('qSpeedUrl');
+                        if (qUrl) qUrl.value = def;
+                        try {
+                            localStorage.removeItem('cfdata_speed_url');
+                            if (window.Android && typeof Android.saveSpeedUrl === 'function') {
+                                Android.saveSpeedUrl(def);
+                            }
+                        } catch (err) {}
+
+                        busyPending = true;
+                        refreshControls();
+                        if (!sendWS('reset_resources')) {
+                            busyPending = false;
+                            refreshControls();
+                        }
+                    },
+                    '#6b7280'
+                );
+            }
+
+            function canStartSideTask() {
+                if (!isConnected) {
+                    log('未连接到程序，请稍后重试');
+                    return false;
+                }
+                if (taskRunning || pendingStart || busyPending || autoSpeed.active || speedInFlight.size > 0) {
+                    log('当前有任务正在运行，请等待完成后再试');
+                    return false;
+                }
+                return true;
+            }
+
+            function shutdownApp() {
+                if (shuttingDown || serverClosed) return;
+                if (!isConnected) {
+                    log('未连接到程序，关闭指令没能发出，请直接关闭 exe');
+                    return;
+                }
+                if (!sendWS('shutdown')) return;
+                shuttingDown = true;
+                serverClosed = true;
+                log('已发送关闭指令，程序正在退出...');
+                setStatus('程序正在关闭，本页面即将自动关闭...', false);
+                refreshControls();
+
+                setTimeout(() => {
+                    try { if (ws) ws.close(); } catch (err) {}
+                    try { window.close(); } catch (err) {}
+                    setStatus('程序已关闭，现在可以直接关掉此页面了', false);
+                }, 1200);
+            }
+
+            // ----------------------- 通用 UI -----------------------
+
+            function refreshControls() {
+                const connected = isConnected && ws && ws.readyState === WebSocket.OPEN;
+                const scanActive = taskRunning && taskKind === 'scan';
+                const scanRunning = scanActive && !scanPaused;
+                const otherTask = taskRunning && !scanActive;
+                const pending = pendingStart || busyPending || fastPending;
+                const closed = shuttingDown || serverClosed;
+
+                const startBtn = $('btnStart');
+                if (startBtn) {
+                    let disabled = !connected || closed || otherTask || pending;
+                    let iconText = '▶';
+                    let titleText = '开始扫描';
+                    let className = 'round-btn primary';
+
+                    if (scanActive) {
+                        disabled = !connected || closed || pausePending || scanStopping;
+                        if (scanPaused) {
+                            iconText = '▶';
+                            titleText = '继续扫描';
+                        } else {
+                            iconText = '❚❚';
+                            titleText = '暂停扫描';
+                            className = 'round-btn warning';
+                        }
+                    } else if (pendingStart) {
+                        iconText = '…';
+                        titleText = '正在启动扫描';
+                    } else if (otherTask) {
+                        iconText = '■';
+                        titleText = taskKind === 'fast' ? '快速优选运行中' : '任务运行中';
+                    }
+
+                    setRoundButton(startBtn, iconText, titleText, className, disabled);
+                }
+
+                const stopScanBtn = $('btnStopScan');
+                if (stopScanBtn) {
+                    setRoundButton(
+                        stopScanBtn,
+                        scanStopping ? '…' : '■',
+                        scanStopping ? '正在取消扫描' : '取消扫描',
+                        'round-btn danger',
+                        !connected || closed || !scanActive || scanStopping
+                    );
+                    stopScanBtn.style.display = scanActive ? '' : 'none';
+                }
+
+                const sideBusy = autoSpeed.active || speedInFlight.size > 0;
+                const sideLocked = !connected || closed || taskRunning || pending || sideBusy;
+                const restoreBtn = $('btnRestoreDefaults');
+                if (restoreBtn) {
+                    // 扫描期间用取消按钮占位，避免三个圆形按钮把 URL 输入框挤窄
+                    restoreBtn.style.display = scanActive ? 'none' : '';
+                    restoreBtn.disabled = sideLocked;
+                    restoreBtn.title = sideLocked ? '当前有任务运行' : '恢复默认设置';
+                }
+
+                const formLocked = !connected || closed || taskRunning || pendingStart || busyPending || fastPending;
+                ['ipType', 'scanThreads', 'testPort', 'speedUrl'].forEach((id) => {
+                    const input = $(id);
+                    if (input) input.disabled = formLocked;
+                });
+
+                // 数据中心按钮只切换本地视图，不依赖服务端连接
+                document.querySelectorAll('#dcTable .action-btn').forEach((btn) => {
+                    btn.disabled = closed;
+                });
+
+                // 扫描运行中（包括刚点“继续扫描”）不允许测速；暂停时才放开
+                const speedLocked = !connected || closed || scanRunning || otherTask || busyPending || autoSpeed.active;
+                speedCells.forEach((entry, ip) => {
+                    entry.btn.disabled = speedLocked || speedInFlight.has(ip);
+                });
+
+                const autoBtn = $('btnAutoSpeed');
+                if (autoBtn) {
+                    if (autoSpeed.active) {
+                        autoBtn.disabled = !connected || closed;
+                        autoBtn.title = '停止测速 (' + (autoSpeed.index + 1) + '/' + autoSpeed.queue.length + ')';
+                        autoBtn.setAttribute('aria-label', autoBtn.title);
+                        autoBtn.classList.add('loading');
+                    } else {
+                        autoBtn.disabled = !connected || closed || scanRunning || otherTask || busyPending ||
+                            testData.length === 0 || speedInFlight.size > 0;
+                        autoBtn.title = '一键测速延迟最低的 3 个 IP';
+                        autoBtn.setAttribute('aria-label', autoBtn.title);
+                        autoBtn.classList.remove('loading');
+                    }
+                }
+
+                const shutdownBtn = $('btnShutdown');
+                if (shutdownBtn) shutdownBtn.disabled = !connected || closed;
+
+                refreshQuickControls();
+            }
+
+            let lastFocusedBeforeModal = null;
+
+            function openModal(modal, focusTarget) {
+                if (!modal) return;
+                lastFocusedBeforeModal = document.activeElement;
+                modal.classList.add('show');
+                const target = focusTarget || modal.querySelector('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
+                if (target) setTimeout(() => target.focus(), 30);
+            }
+
+            function closeModal(modal) {
+                if (!modal) return;
+                modal.classList.remove('show');
+                if (lastFocusedBeforeModal && document.contains(lastFocusedBeforeModal)) {
+                    lastFocusedBeforeModal.focus();
+                }
+                lastFocusedBeforeModal = null;
+            }
+
+            function showConfirmModal(title, message, onConfirm, confirmColor) {
+                const modal = $('confirmModal');
+                const titleEl = $('confirmTitle');
+                const messageEl = $('confirmMessage');
+                const okBtn = $('confirmOk');
+                const cancelBtn = $('confirmCancel');
+                if (!modal || !okBtn || !cancelBtn) return;
+
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+                okBtn.style.background = confirmColor || '#2563eb';
+                openModal(modal, cancelBtn);
+
+                const close = () => {
+                    closeModal(modal);
+                    okBtn.onclick = null;
+                    cancelBtn.onclick = null;
+                };
+
+                okBtn.onclick = () => {
+                    close();
+                    onConfirm();
+                };
+                cancelBtn.onclick = close;
+            }
+
+            function clearTable(tbody) {
+                if (!tbody) return;
+                while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+            }
+
+            function updateBadge(id, count) {
+                const badge = $(id);
+                if (badge) badge.textContent = count;
+            }
+
+            function updateProgress(current, total, statusText, detail) {
+                const bar = $('progressBar');
+                if (!bar) return;
+                showProgress();
+                setProgressState(scanPaused ? 'warning' : 'running');
+
+                const cur = Number(current) || 0;
+                const tot = Number(total) || 0;
+                if (tot <= 0) {
+                    bar.style.width = '0%';
+                    bar.textContent = statusText || '准备中';
+                    return;
+                }
+                const percent = Math.max(0, Math.min(100, Math.round((cur / tot) * 100)));
+                bar.style.width = percent + '%';
+                bar.textContent = statusText + ' ' + percent + '%' + (detail ? ' · ' + detail : '');
+            }
+
+            function showProgress() {
+                const box = $('progressBox');
+                if (box) box.style.display = 'block';
+            }
+
+            function hideProgress() {
+                const box = $('progressBox');
+                if (box) box.style.display = 'none';
+            }
+
+            function setProgressState(state) {
+                const bar = $('progressBar');
+                if (!bar) return;
+                bar.classList.toggle('progress-warning', state === 'warning');
+                bar.classList.toggle('progress-complete', state === 'done');
+            }
+
+            function resetProgressStyle() {
+                const bar = $('progressBar');
+                if (!bar) return;
+                bar.style.removeProperty('background');
+                bar.style.removeProperty('background-color');
+                setProgressState('running');
+            }
+
+            function setStatus(text, connected) {
+                statusText = text;
+                isConnected = connected;
+                renderStatus();
+            }
+
+            function renderStatus() {
+                const statusEl = $('status');
+                if (!statusEl) return;
+
+                statusEl.title = statusText;
+                statusEl.setAttribute('aria-label', statusText);
+                statusEl.classList.remove('connecting', 'disconnected');
+
+                if (isConnected) {
+                    statusEl.textContent = '已连接';
+                    return;
+                }
+                if (/正在连接/.test(statusText)) {
+                    statusEl.classList.add('connecting');
+                    statusEl.textContent = '连接中';
+                } else {
+                    statusEl.classList.add('disconnected');
+                    statusEl.textContent = '已断开';
+                }
+            }
+
+            const IPV6_STATE_HINT = {
+                checking: '正在检测当前网络是否支持 IPv6',
+                ok: '当前网络支持 IPv6',
+                no: '当前网络不支持 IPv6',
+                unknown: '当前网络 IPv6 连通性未知'
+            };
+
+            // 网络变化后的自动重测：不弹提示，只在运行日志里留痕
+            function triggerIPv6Recheck(reason, throttle) {
+                if (!ws || ws.readyState !== WebSocket.OPEN) return;
+                const now = Date.now();
+                if (throttle && now - lastIPv6AutoAt < 3000) return;
+                lastIPv6AutoAt = now;
+                log('网络变化（' + reason + '），重新检测网络（IPv4 / IPv6）…');
+                sendWS('check_ipv6', { force: true });
+            }
+
+            function applyIPv6Status(data, emitLog) {
+                const state = Object.prototype.hasOwnProperty.call(IPV6_STATE_HINT, data.state)
+                    ? data.state
+                    : 'unknown';
+                ipv6Info = {
+                    state: state,
+                    text: typeof data.text === 'string' && data.text ? data.text : 'IPv6 未知',
+                    detail: typeof data.detail === 'string' && data.detail
+                        ? data.detail
+                        : (IPV6_STATE_HINT[state] || '')
+                };
+                renderIPv6Status();
+                // 胶囊只靠颜色表达状态，文字详情统一写进运行日志
+                if (emitLog && state !== 'checking') {
+                    const line = '网络检测：' + ipv6Info.text + '；' + ipv6Info.detail;
+                    if (line !== lastIPv6LogLine) {
+                        lastIPv6LogLine = line;
+                        log(line);
+                    }
+                }
+            }
+
+            function renderIPv6Status() {
+                const el = $('ipv6StatusBtn');
+                if (!el) return;
+                el.classList.remove('connecting', 'disconnected', 'unknown');
+                if (ipv6Info.state === 'checking') el.classList.add('connecting');
+                else if (ipv6Info.state === 'no') el.classList.add('disconnected');
+                else if (ipv6Info.state === 'unknown') el.classList.add('unknown');
+                el.textContent = 'IPv6';
+                el.title = IPV6_STATE_HINT[ipv6Info.state] + '：' + ipv6Info.detail + '\n点击重新检测';
+                el.setAttribute('aria-label', IPV6_STATE_HINT[ipv6Info.state] + '，' + ipv6Info.detail + '，点击可重新检测');
+            }
+
+            function getLatencyColor(latencyStr) {
+                const latency = parseFloat(latencyStr);
+                if (isNaN(latency)) return 'inherit';
+                if (latency < 100) return '#10b981';
+                if (latency < 200) return '#f59e0b';
+                return '#ef4444';
+            }
+
+            function getSpeedResultColor(speedText) {
+                const isDark = document.body.classList.contains('dark-theme');
+                let color = isDark ? '#e5e7eb' : '#1f2937';
+
+                if (speedText.includes('MB/s')) {
+                    const val = parseFloat(speedText);
+                    if (val > 10) color = '#10b981';
+                    else if (val > 5) color = '#f59e0b';
+                } else if (/错误|无效|失败|缺少|超时|无数据/.test(speedText)) {
+                    color = isDark ? '#fca5a5' : '#b91c1c';
+                }
+                return color;
+            }
+
+            function refreshSpeedResultColors() {
+                document.querySelectorAll('#testTable strong.speed-result').forEach((resultEl) => {
+                    const text = resultEl.textContent.trim();
+                    if (!text) return;
+                    resultEl.style.color = getSpeedResultColor(text);
+                });
+            }
+
+            function setLogOpen(open) {
+                const panel = $('logPanel');
+                const toggle = $('logToggle');
+                if (!panel) return;
+                panel.classList.toggle('collapsed', !open);
+                if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                try {
+                    localStorage.setItem('cfdata_log_open', open ? '1' : '0');
+                } catch (err) {}
+            }
+
+            function initLogPanel() {
+                let open = true;
+                try {
+                    const saved = localStorage.getItem('cfdata_log_open');
+                    if (saved === '0') open = false;
+                } catch (err) {}
+                setLogOpen(open);
+                const toggle = $('logToggle');
+                if (toggle) {
+                    toggle.addEventListener('click', () => {
+                        setLogOpen(toggle.getAttribute('aria-expanded') !== 'true');
+                    });
+                }
+            }
+
+            let toastTimer = null;
+
+            function showToast(message) {
+                const toast = $('toast');
+                if (!toast) return;
+                toast.textContent = message;
+                toast.classList.add('show');
+                if (toastTimer) clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => {
+                    toast.classList.remove('show');
+                    toastTimer = null;
+                }, 1600);
+            }
+
+            function log(text) {
+                const box = $('logBox');
+                if (!box) return;
+
+                let message;
+                if (typeof text === 'string') {
+                    message = text;
+                } else {
+                    try {
+                        message = JSON.stringify(text);
+                    } catch (err) {
+                        message = String(text);
+                    }
+                }
+
+                if (/失败|错误|异常|断开|无法|超时|关闭/.test(message)) {
+                    setLogOpen(true);
+                }
+
+                const line = document.createElement('div');
+                const timeSpan = document.createElement('span');
+                timeSpan.style.opacity = '0.6';
+                timeSpan.textContent = '[' + new Date().toLocaleTimeString() + ']';
+                line.append(timeSpan, document.createTextNode(' ' + message));
+                box.appendChild(line);
+
+                while (box.childElementCount > MAX_LOG_LINES) {
+                    box.removeChild(box.firstElementChild);
+                }
+                box.scrollTop = box.scrollHeight;
+            }
+
+            function copyToClipboard(text) {
+                const showCopied = () => showToast('已复制 ' + text);
+
+                const fallbackCopy = () => {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.setAttribute('readonly', 'readonly');
+                    textarea.style.position = 'fixed';
+                    textarea.style.top = '-9999px';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.focus();
+                    textarea.select();
+                    textarea.setSelectionRange(0, textarea.value.length);
+
+                    let copied = false;
+                    try {
+                        copied = document.execCommand('copy');
+                    } catch (err) {
+                        copied = false;
+                    }
+
+                    document.body.removeChild(textarea);
+                    if (copied) {
+                        showCopied();
+                    } else {
+                        log('复制失败，请手动复制 IP');
+                    }
+                };
+
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text).then(showCopied).catch(() => {
+                        fallbackCopy();
+                    });
+                    return;
+                }
+                fallbackCopy();
+            }
+
+            function switchTab(tabId) {
+                const target = tabId === 'test' ? 'test' : 'scan';
+                document.querySelectorAll('.tab').forEach((tab) => {
+                    const active = tab.dataset.tab === target;
+                    tab.classList.toggle('active', active);
+                    tab.setAttribute('aria-selected', active ? 'true' : 'false');
+                    tab.tabIndex = active ? 0 : -1;
+                });
+                document.querySelectorAll('.tab-content').forEach((content) => {
+                    content.classList.toggle('active', content.id === target);
+                });
+            }
+
+            // ----------------------- 主题 -----------------------
+
+            function systemPrefersDark() {
+                try {
+                    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                } catch (err) {
+                    return false;
+                }
+            }
+
+            function resolveThemeMode(mode) {
+                if (mode === 'light' || mode === 'dark') return mode;
+                return systemPrefersDark() ? 'dark' : 'light';
+            }
+
+            const THEME_LABELS = { auto: '自动', light: '日间', dark: '夜间' };
+            const THEME_CYCLE_NEXT = { auto: 'light', light: 'dark', dark: 'auto' };
+
+            function applyTheme(mode) {
+                const resolvedMode = resolveThemeMode(mode);
+                const activeMode = (mode === 'light' || mode === 'dark') ? mode : 'auto';
+
+                document.body.classList.toggle('dark-theme', resolvedMode === 'dark');
+
+                const cycleBtn = $('themeCycleBtn');
+                if (cycleBtn) {
+                    cycleBtn.dataset.themeMode = activeMode;
+                    const label = '主题：' + THEME_LABELS[activeMode] + '（点击切换）';
+                    cycleBtn.title = label;
+                    cycleBtn.setAttribute('aria-label', label);
+                }
+
+                renderStatus();
+                refreshSpeedResultColors();
+            }
+
+            function setThemeMode(mode) {
+                const nextMode = (mode === 'light' || mode === 'dark') ? mode : 'auto';
+                try {
+                    localStorage.setItem('cfdata_theme_mode', nextMode);
+                } catch (err) {}
+                window.__cfThemeMode = nextMode;
+                applyTheme(nextMode);
+            }
+
+            function cycleThemeMode() {
+                const current = window.__cfThemeMode || 'auto';
+                const next = THEME_CYCLE_NEXT[current] || 'auto';
+                setThemeMode(next);
+                showToast('主题：' + THEME_LABELS[next]);
+            }
+
+            function initTheme() {
+                let mode = 'auto';
+                try {
+                    const saved = localStorage.getItem('cfdata_theme_mode');
+                    if (saved === 'light' || saved === 'dark' || saved === 'auto') {
+                        mode = saved;
+                    }
+                } catch (err) {}
+
+                window.__cfThemeMode = mode;
+                applyTheme(mode);
+
+                try {
+                    if (window.matchMedia) {
+                        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+                        const onChange = () => {
+                            if (window.__cfThemeMode === 'auto') applyTheme('auto');
+                        };
+                        if (mq.addEventListener) mq.addEventListener('change', onChange);
+                        else if (mq.addListener) mq.addListener(onChange);
+                    }
+                } catch (err) {}
+            }
+
+            function saveSpeedUrl(url) {
+                try {
+                    localStorage.setItem('cfdata_speed_url', url);
+                    const fullUrl = $('speedUrl');
+                    if (fullUrl) fullUrl.value = url;
+                    const qUrl = $('qSpeedUrl');
+                    if (qUrl) qUrl.value = url;
+                    if (window.Android && typeof Android.saveSpeedUrl === 'function') {
+                        Android.saveSpeedUrl(url);
+                    }
+                } catch (err) {}
+            }
+
+            // ----------------------- 初始化 -----------------------
+
+            (function init() {
+                initTheme();
+                initLogPanel();
+                loadQuickSettings();
+
+                try {
+                    const saved = localStorage.getItem('cfdata_speed_url');
+                    if (saved) {
+                        const input = $('speedUrl');
+                        if (input) input.value = saved;
+                    }
+                } catch (err) {}
+
+                let initialMode = 'quick';
+                try {
+                    const savedMode = localStorage.getItem('cfdata_mode');
+                    if (savedMode === 'full' || savedMode === 'quick') initialMode = savedMode;
+                } catch (err) {}
+                setMode(initialMode, true);
+
+                document.querySelectorAll('[data-tab]').forEach((btn) => {
+                    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+                });
+                document.querySelectorAll('.mode-pill').forEach((btn) => {
+                    btn.addEventListener('click', () => setMode(btn.dataset.mode, false));
+                });
+
+                const bind = (id, fn) => {
+                    const node = $(id);
+                    if (node) node.addEventListener('click', fn);
+                };
+                bind('btnStart', handlePrimaryAction);
+                bind('btnStopScan', stopScanTask);
+                bind('btnRestoreDefaults', restoreDefaults);
+                bind('btnShutdown', shutdownApp);
+                bind('btnAutoSpeed', handleAutoSpeedClick);
+                bind('themeCycleBtn', cycleThemeMode);
+                renderIPv6Status();
+                bind('ipv6StatusBtn', () => {
+                    if (sendWS('check_ipv6', { force: true })) {
+                        // 主动重测即使结论相同也要在日志里留一条记录
+                        lastIPv6LogLine = '';
+                        ipv6ManualCheck = true;
+                        showToast('IPv6 检测已开始');
+                        applyIPv6Status({ state: 'checking', text: 'IPv6 检测中', detail: '正在重新检测当前网络是否支持 IPv6' });
+                    } else {
+                        showToast('未连接到程序');
+                    }
+                });
+
+                // 切换 WiFi / 移动网络时自动重测：online 负责「网络恢复」，
+                // WS 重连负责浏览器没发 online、但 TCP 连接已经断过的场景。
+                window.addEventListener('online', () => triggerIPv6Recheck('网络已恢复', true));
+                window.addEventListener('offline', () => {
+                    applyIPv6Status({ state: 'unknown', text: 'IPv6 未知', detail: '网络已断开，恢复后会重新检测' });
+                    log('网络已断开，恢复后将重新检测网络（IPv4 / IPv6）');
+                });
+
+                bind('qStart', handleQuickStart);
+                bind('qDCFilterBtn', openDCFilter);
+                bind('qHistoryClear', clearQuickHistory);
+                bind('dcFilterCancel', closeDCFilter);
+                bind('dcFilterApply', applyDCFilter);
+                bind('dcSelectAll', () => {
+                    if (!dcOptionsLoaded) return;
+                    dcOptions.forEach((item) => dcFilterDraft.add(item.code));
+                    renderDCFilterList();
+                });
+                bind('dcSelectNone', () => {
+                    dcFilterDraft.clear();
+                    renderDCFilterList();
+                });
+
+                const dcSearch = $('dcFilterSearch');
+                if (dcSearch) {
+                    dcSearch.addEventListener('input', () => {
+                        const q = dcSearch.value.trim().toLowerCase();
+                        if (q && dcOptionsLoaded) {
+                            buildDCGroups().forEach((group) => {
+                                const groupLabelMatch = group.label.toLowerCase().includes(q);
+                                const hasMatch = group.items.some((item) => {
+                                    return groupLabelMatch || dcSearchHaystack(item).includes(q);
+                                });
+                                if (hasMatch) dcExpandedGroups.add(group.key);
+                            });
+                        }
+                        renderDCFilterList();
+                    });
+                }
+
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        const confirmModal = $('confirmModal');
+                        if (confirmModal && confirmModal.classList.contains('show')) {
+                            const cancel = $('confirmCancel');
+                            if (cancel) cancel.click();
+                            return;
+                        }
+                        const dcModal = $('dcFilterModal');
+                        if (dcModal && dcModal.classList.contains('show')) {
+                            closeDCFilter();
+                        }
+                        return;
+                    }
+                    if (event.key !== 'Tab') return;
+
+                    const openModalEl = document.querySelector('.modal-overlay.show .modal');
+                    if (!openModalEl) return;
+                    const focusables = Array.from(openModalEl.querySelectorAll(
+                        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+                    )).filter((node) => node.offsetParent !== null);
+                    if (focusables.length === 0) return;
+                    const first = focusables[0];
+                    const last = focusables[focusables.length - 1];
+                    if (event.shiftKey && document.activeElement === first) {
+                        event.preventDefault();
+                        last.focus();
+                    } else if (!event.shiftKey && document.activeElement === last) {
+                        event.preventDefault();
+                        first.focus();
+                    }
+                });
+
+                [$('confirmModal'), $('dcFilterModal')].forEach((overlay) => {
+                    if (!overlay) return;
+                    overlay.addEventListener('click', (event) => {
+                        if (event.target !== overlay) return;
+                        if (overlay.id === 'confirmModal') {
+                            const cancel = $('confirmCancel');
+                            if (cancel) cancel.click();
+                        } else {
+                            closeDCFilter();
+                        }
+                    });
+                });
+
+                updateBadge('scanCount', 0);
+                updateBadge('testCount', 0);
+                updateBadge('dcCount', 0);
+                updateBadge('qHistoryCount', 0);
+                updateTableEmptyStates();
+                renderQuick();
+                refreshControls();
+                connect();
+            })();
+        })();
+    </script>
+</body>
+</html>
