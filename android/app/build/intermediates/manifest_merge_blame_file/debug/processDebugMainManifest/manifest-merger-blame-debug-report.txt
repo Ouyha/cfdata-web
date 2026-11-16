@@ -1,0 +1,59 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.cfdata.app"
+4    android:versionCode="10"
+5    android:versionName="3.5" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="29"
+9        android:targetSdkVersion="36" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:4:5-67
+11-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:4:22-64
+12    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+12-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:5:5-79
+12-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:5:22-76
+13
+14    <application
+14-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:7:5-25:19
+15        android:debuggable="true"
+16        android:extractNativeLibs="false"
+17        android:icon="@mipmap/ic_launcher"
+17-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:9:9-43
+18        android:label="CFScan"
+18-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:8:9-31
+19        android:roundIcon="@mipmap/ic_launcher"
+19-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:10:9-48
+20        android:supportsRtl="true"
+20-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:11:9-35
+21        android:theme="@style/AppTheme"
+21-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:13:9-40
+22        android:usesCleartextTraffic="true" >
+22-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:12:9-44
+23        <activity
+23-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:14:9-24:20
+24            android:name="com.cfdata.app.MainActivity"
+24-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:15:13-41
+25            android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+25-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:17:13-81
+26            android:exported="true"
+26-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:16:13-36
+27            android:launchMode="singleTask"
+27-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:18:13-44
+28            android:windowSoftInputMode="adjustResize" >
+28-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:19:13-55
+29            <intent-filter>
+29-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:20:13-23:29
+30                <action android:name="android.intent.action.MAIN" />
+30-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:21:17-69
+30-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:21:25-66
+31
+32                <category android:name="android.intent.category.LAUNCHER" />
+32-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:22:17-77
+32-->D:\app\Cloudflare\cfdata-web\android\app\src\main\AndroidManifest.xml:22:27-74
+33            </intent-filter>
+34        </activity>
+35    </application>
+36
+37</manifest>

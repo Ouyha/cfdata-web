@@ -1,0 +1,4 @@
+com.cfdata.app:style/AppTheme = 0x7f030000
+com.cfdata.app:mipmap/ic_launcher = 0x7f020000
+com.cfdata.app:mipmap/ic_launcher_foreground = 0x7f020001
+com.cfdata.app:color/ic_launcher_background = 0x7f010000
